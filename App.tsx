@@ -19,10 +19,6 @@ import { useTheme } from './src/ui/theme';
 
 type Route = 'chat' | 'settings' | 'login' | 'register' | 'recover' | 'profile';
 
-/**
- * Primer pantalla: login con el token del Studio API. Con token guardado se va
- * directo al chat; el pedido de acceso se ofrece desde el propio login.
- */
 function startRoute(): Route {
   return hasSession() ? 'chat' : 'login';
 }
@@ -30,14 +26,10 @@ function startRoute(): Route {
 export default function App() {
   const { dark, c } = useTheme();
   const [route, setRoute] = useState<Route | null>(null);
-  /** true cuando login/register se abrieron desde Configuracion. */
   const [fromSettings, setFromSettings] = useState(false);
-  /** De donde se abrio el perfil, para que "volver" haga lo esperado. */
   const [profileFrom, setProfileFrom] = useState<'chat' | 'settings'>('chat');
-  /** Version nueva publicada en el Studio API (null si no hay nada). */
   const [update, setUpdate] = useState<UpdateInfo | null>(null);
 
-  // Busca version nueva al arrancar y al volver a primer plano (cada 6 h).
   useEffect(() => {
     let alive = true;
     const look = () => {
@@ -71,8 +63,6 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    // Ajustes desde la tabla `settings` antes de tocar la red o el shell; con
-    // ellos se decide la primera pantalla (sin parpadeo: la lectura es sync).
     hydrateSettings();
     setRoute(startRoute());
     void hydrate();
@@ -95,7 +85,6 @@ export default function App() {
     setRoute('login');
   }, []);
 
-  // Login/Register abiertos desde "Sesion" en Configuracion pueden volver ahi.
   const back = fromSettings ? () => setRoute('settings') : undefined;
 
   if (!route) {
