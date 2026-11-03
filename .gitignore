@@ -1,0 +1,90 @@
+# OSX
+.DS_Store
+
+# Xcode
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+xcuserdata
+*.xccheckout
+*.moved-aside
+DerivedData
+*.hmap
+*.ipa
+*.xcuserstate
+**/.xcode.env.local
+CLAUDE.md
+.bundle/
+
+# Android (solo lo generado; el codigo de android/ SI va al repo)
+android/.gradle/
+android/build/
+android/app/build/
+android/app/release/
+android/app/.cxx/
+android/.cxx/
+android/.kotlin/
+android/local.properties
+.cxx/
+.kotlin/
+.idea/
+.gradle/
+*.iml
+*.hprof
+
+# Firma y artefactos
+*.jks
+*.keystore
+!android/app/debug.keystore
+keystore.properties
+google-services.json
+*.apk
+*.aab
+*.jsbundle
+
+# node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+*.log
+
+# fastlane
+**/fastlane/report.xml
+**/fastlane/Preview.html
+**/fastlane/screenshots
+**/fastlane/test_output
+
+# Ruby / CocoaPods
+**/Pods/
+/vendor/bundle/
+
+# Temporary files created by Metro to check the health of the file watcher
+.metro-health-check*
+
+# testing
+/coverage
+
+# local secrets
+.env
+.env.*
+src/config.local.ts
+
+# harness local del telefono
+.chia/
+
+# editores
+.vscode/
+*.orig
+
+# Yarn
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
