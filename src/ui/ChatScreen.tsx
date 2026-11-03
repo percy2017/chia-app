@@ -783,7 +783,7 @@ export function ChatScreen({
       >
         <View style={styles.brand}>
           <Image source={LOGO_HEAD} style={styles.logo} accessibilityLabel="ChiaNative" />
-          <Text style={[styles.title, { color: c.text }]}>Chia</Text>
+          <Text style={[styles.title, { color: c.text }]}>Chia Agente</Text>
         </View>
         <View style={styles.headerActions}>
           <Pressable
@@ -928,7 +928,7 @@ export function ChatScreen({
           <Text style={[styles.sidebarHint, { color: c.muted }]} numberOfLines={2}>
             {limits
               ? `${formatTokens(limits.tokensInput)} entrada · ${formatTokens(limits.tokensOutput)} salida · ${formatTokens(limits.tokensFree)} libres`
-              : 'la ventana la informa el servidor en la proxima respuesta'}
+              : 'la ventana informa al servidor'}
           </Text>
 
           <ScrollView
@@ -996,7 +996,7 @@ export function ChatScreen({
               </View>
             ))}
             <View style={[styles.metricRow, styles.toolTotalRow, { borderTopColor: c.border }]}>
-              <Text style={[styles.metricLabel, { color: c.muted }]}>total</Text>
+              <Text style={[styles.metricLabel, { color: c.muted }]}>Total</Text>
               <Text style={[styles.toolCell, { color: c.text }]}>{counters.toolTotal}</Text>
               <Text style={[styles.toolCell, { color: c.text }]}>
                 {formatTokens(counters.toolChars)}

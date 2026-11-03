@@ -66,24 +66,6 @@ function CopyButton({ value }: { value: string }) {
   );
 }
 
-/** Me gusta del bloque de respuesta: solo estado local, sin backend. */
-function LikeButton() {
-  const { c } = useTheme();
-  const [liked, setLiked] = useState(false);
-  return (
-    <Pressable
-      onPress={() => setLiked(current => !current)}
-      hitSlop={10}
-      accessibilityRole="button"
-      accessibilityLabel={liked ? 'Quitar me gusta' : 'Me gusta'}
-      accessibilityState={{ selected: liked }}
-      style={styles.copy}
-    >
-      <Icon name="thumbsUp" size={14} color={liked ? c.accent : c.muted} />
-    </Pressable>
-  );
-}
-
 /** Lee la respuesta: primero el modelo escribe el guion, luego el servidor de voz. */
 function ListenButton({
   id,
@@ -219,7 +201,6 @@ function Footer({
   align,
   speakable,
   speakId,
-  likeable,
 }: {
   value: string;
   stamp?: string;
@@ -228,7 +209,6 @@ function Footer({
   align: 'left' | 'right';
   speakable?: boolean;
   speakId?: string;
-  likeable?: boolean;
 }) {
   const { c } = useTheme();
   // Cada dato va separado con "|" y los botones cierran la fila.
@@ -268,7 +248,6 @@ function Footer({
       {speakable
         ? <Text style={[styles.footerSep, { color: c.muted }]}>|</Text>
         : null}
-      {likeable ? <LikeButton /> : null}
       <CopyButton value={value} />
     </View>
   );
@@ -575,7 +554,6 @@ export const MessageBubble = React.memo(function MessageBubble({ message }: { me
                 align={isUser ? 'right' : 'left'}
                 speakable={!isUser && message.status === 'done'}
                 speakId={message.id}
-                likeable={!isUser && message.status === 'done'}
               />
             )
           : null}

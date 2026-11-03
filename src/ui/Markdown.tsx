@@ -19,14 +19,12 @@ const mono = Platform.select({ ios: 'Menlo', android: 'monospace' });
 const INLINE
   = /(\*\*[^*\n]+\*\*|__[^_\n]+__|\*[^*\n]+\*|_[^_\n]+_|`[^`\n]+`|\[[^\]\n]+\]\([^)\s]+\)|(?:https?:\/\/|www\.)[^\s<>()\[\]]+)/gi;
 
-/** Puntuacion que suele pegarse al final de una URL en prosa. */
 const URL_TAIL = /[),.;:!?'"]+$/;
 
 export type Segment =
   | { kind: 'text' | 'bold' | 'italic' | 'code'; text: string }
   | { kind: 'link'; text: string; url: string };
 
-/** Deja una URL lista para ACTION_VIEW (https si viene sin esquema). */
 export function normalizeUrl(url: string): string {
   const trimmed = url.trim();
   if (/^[a-z][a-z0-9+.-]*:/i.test(trimmed)) {
@@ -145,7 +143,6 @@ function Inline({
   );
 }
 
-/** Boton de copiar del bloque (codigo o JSON). */
 function CopyCode({ value }: { value: string }) {
   const { c } = useTheme();
   const [copied, setCopied] = useState(false);
@@ -297,7 +294,6 @@ export function parseMarkdown(source: string): Block[] {
       continue;
     }
 
-    // Tabla: fila de cabecera seguida de separador |---|:--:|
     if (
       TABLE_LINE.test(line)
       && i + 1 < lines.length
@@ -427,8 +423,6 @@ export function Markdown({
               </View>
             );
           case 'table':
-            // 2 columnas: se apilan como "campo / valor" para que se lea
-            // completo en pantalla; 3+ columnas: scroll horizontal.
             if (block.header.length === 2) {
               return (
                 <View

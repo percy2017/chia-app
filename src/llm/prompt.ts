@@ -58,12 +58,12 @@ Reglas: enabled:false = falta permiso que solo da el usuario (abri *.settings y 
 
 export function ragToolDescription(): string {
   return `Memoria a largo plazo: indexa archivos en vectores (Studio API /embed) y busca en ellos.
-- action index {url | path, name?}: descarga la URL o lee la ruta del telefono (/sdcard/...) y la indexa. Formatos: pdf, doc/docx, xls/xlsx, ppt/pptx, odt/ods/odp, rtf, txt/md/csv/html, json/xml e imagenes jpg/png/tiff (OCR). Max 25 MB. Si ya estaba (mismo contenido) no lo repite.
+- action index {url | path, name?}: descarga la URL o lee la ruta del telefono (/sdcard/...) y la indexa. Formatos: pdf, doc/docx, xls/xlsx, ppt/pptx, odt/ods/odp, rtf, txt/md/csv/html, json/xml e imagenes jpg/png/tiff (OCR).
 - action search {query, doc?, limit<=10}: fragmentos mas parecidos de todos los documentos o de uno (doc = nombre, parte del nombre o id).
 - action list {}: documentos indexados (nombre, paginas, fragmentos, fecha).
 - action read {doc, from?, limit?}: fragmentos consecutivos de un documento, para leerlo completo por partes.
 - action forget {doc}: borra un documento del indice y su archivo.
-Usala cuando la respuesta pueda estar en sus archivos, y para guardar un archivo que te pasen por URL (la descarga la hace la app en el telefono). Todo ocurre en el telefono: no hace falta el VPS ni shell_exec. Cita el documento y la pagina en la respuesta.`;
+Usala cuando la respuesta pueda estar en sus archivos, y para guardar un archivo que te pasen por URL (la descarga la hace la app en el telefono). Todo ocurre en el telefono, Cita el documento y la pagina en la respuesta.`;
 }
 
 export function webFetchToolDescription(): string {

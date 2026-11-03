@@ -136,10 +136,10 @@ curl -s "$BASE/app/qr" -o /tmp/qr.png             # QR para vincular (se escanea
 
 curl -s -X POST "$BASE/send/message" \\
   -H 'Content-Type: application/json' -H "X-Device-Id: <device>" \\
-  -d '{"phone":"591XXXXXXXX","message":"hola"}'
+  -d '{"phone":"<pais><numero>","message":"hola"}'
 
 curl -s -X POST "$BASE/send/image" \\
-  -H "X-Device-Id: <device>" -F "phone=591XXXXXXXX" -F "caption=hola" -F "image=@/ruta/foto.jpg"
+  -H "X-Device-Id: <device>" -F "phone=<pais><numero>" -F "caption=hola" -F "image=@/ruta/foto.jpg"
 
 curl -s "$BASE/webhook"                            # webhooks configurados
 curl -s "$BASE/app/reconnect"                      # forzar reconexion
@@ -153,7 +153,7 @@ Ajusta las rutas a la version instalada: si un endpoint devuelve 404, mira \`cur
 | Sintoma | Causa probable | Que hacer |
 |---|---|---|
 | \`El numero X no aparece como usuario de WhatsApp\` | el numero no tiene WhatsApp o esta mal formado (falta codigo de pais, \`+\`, espacios) | normalizar a solo digitos con pais y volver a probar; confirmar con el usuario |
-| \`422\` + \`INVALID_JID\` / \`invalid phone\` | JID mal armado | usar \`591XXXXXXXX\` sin \`+\`, \`@s.whatsapp.net\` lo agrega GOWA |
+| \`422\` + \`INVALID_JID\` / \`invalid phone\` | JID mal armado | usar \`<pais><numero>\` sin \`+\`, \`@s.whatsapp.net\` lo agrega GOWA |
 | \`401\` / \`403\` | basic auth o api key | pedir la credencial al usuario |
 | \`timeout\` o \`no se pudo contactar el servidor\` | proceso caido, puerto cerrado, firewall, o el VPS sin salida a WhatsApp | \`systemctl --user status <servicio>\`, \`ss -ltnp\`, \`journalctl --user -u <servicio> -n 50\` |
 | 200 pero el mensaje no llega | device desconectado o sesion en otro device | \`$BASE/app/devices\`, revisar estado y reconectar |
@@ -736,6 +736,116 @@ La nota no se escribe una vez y se olvida: es responsabilidad tuya que siga sien
 5. Releer con read despues de escribir para confirmar el contenido.
 `;
 
+const RCLONE_GOOGLE_DRIVE = `---
+name: rclone-google-drive
+description: Opera la cuenta Google desde el VPS: Drive con rclone (remote, OAuth sin navegador, subir/bajar, sync, backups), eventos de Google Calendar via .ics y correo por Gmail SMTP. Usala si dicen rclone, gdrive, archivos a Drive, respaldar, calendario o mandar mail.
+compatibility: shell_exec con rclone instalado en el VPS; el usuario con un navegador y su cuenta de Google.
+---
+
+# Google desde el VPS headless (Drive con rclone, Calendar .ics, correo SMTP)
+
+Todo se opera con \`shell_exec\` en el VPS del cliente. Verificá que rclone esté instalado (\`rclone version\`; si falta, \`curl https://rclone.org/install.sh | sudo bash\`) y que corra con el usuario dueño de \`~/.config/rclone/rclone.conf\`.
+
+**Nunca supongas el nombre del remote**: sale de \`rclone listremotes\` o se le pregunta al usuario. En los ejemplos de abajo se usa \`gdrive\` como convención: reemplazalo por el que exista.
+
+## Regla numero uno: los dos puntos
+
+El nombre del remote **sin** \`:\` es una **carpeta local**. Siempre \`<remote>:\` o \`<remote>:carpeta\` (en los ejemplos, \`gdrive:\`). Si rclone dice *"refers to a local folder"*, falta el \`:\`.
+
+## Antes de actuar
+
+1. \`rclone listremotes\` — ver si ya existe el remote (no reconfigurar si ya anda).
+2. \`rclone about <remote>:\` — cuota y si el token sigue vivo (si falla el token, reautorizar).
+3. Silenciar el aviso del client_id compartido cuando ensucia la salida: agregar \`2>/dev/null\` o \`--quiet\` segun el caso (es solo un NOTICE, no un error).
+
+## Flujo de autorizacion OAuth sin navegador en el servidor
+
+El servidor no tiene navegador y el telefono no alcanza \`127.0.0.1:53682\` del VPS, asi que el intercambio lo hace el servidor con \`curl\`. Pasos exactos:
+
+1. Lanzar en background y leer el link con \`state\`:
+   \`nohup rclone authorize drive --auth-no-open-browser > /tmp/ra.log 2>&1 & sleep 3; cat /tmp/ra.log\`
+   (guardar el PID/\`pgrep -af "rclone authorize"\` y matar el anterior antes de reintentar.)
+2. Convertir el link local en el link real de Google: el \`/auth?state=\` responde 302, hay que leer el \`Location\`:
+   \`curl -s -o /dev/null -D - "http://127.0.0.1:53682/auth?state=<STATE>" | tr -d '\\r' | grep -i '^location'\`
+3. Mandar al usuario **ese** Location (accounts.google.com). Pedirle solo el login; el \`scope=.../auth/drive\` ya viene por defecto (control total). Si aparece "app no verificada" → *Configuracion avanzada → Ir a rclone (no seguro)*.
+4. El navegador del usuario termina en \`http://127.0.0.1:53682/?state=...&code=4/0A...\` con **ERR_CONNECTION_REFUSED**: eso es lo esperado. Pedirle que copie esa URL completa (o el valor de \`code=\`) y pegarla en el chat.
+5. Cerrar el flujo pegando esa URL **en el servidor**:
+   \`curl -s "http://127.0.0.1:53682/?state=...&code=..."\` → responde "Success!" y \`/tmp/ra.log\` imprime el JSON del token.
+6. Crear el remote con ese JSON:
+   \`TOK=$(grep -o '{"access_token".*}' /tmp/ra.log); rclone config create gdrive drive token "$TOK" scope drive config_is_local false --non-interactive\`
+   - \`config_is_local false\`: el servidor hace el refresh del token solo (obligatorio en headless).
+   - \`scope drive\` = control total; \`drive.readonly\` solo lectura; \`drive.file\` solo lo creado por rclone.
+7. Verificar: \`rclone about gdrive:\` + una prueba real de escritura y borrado (copiar un \`echo ok > t.txt\`, listar, borrar). Nunca dar por buena una config sin esta prueba.
+8. Limpiar \`/tmp/ra.log\` si tiene tokens y matar el \`rclone authorize\` colgado.
+
+Si el usuario ya tiene **client_id/client_secret** propios, pasarlos como flags al crear el remote (\`client_id=... client_secret=...\`). El client_id compartido de rclone se retira durante 2026: avisar y ofrecer crear uno propio (Google Cloud → APIs habilitadas: Drive API → credenciales OAuth tipo "Desktop app" → redirect \`http://127.0.0.1:53682/\`).
+
+## Operaciones habituales (imperativo, copiar y adaptar)
+
+- Ver raiz: \`rclone lsf gdrive:\` — solo carpetas: \`rclone lsf --dirs-only gdrive:\` — con detalle: \`rclone lsjson gdrive: | python3 -m json.tool\`
+- Recorrer todo: \`rclone lsf -R gdrive:ruta\` (o \`--max-depth 2\`).
+- Tamano de una carpeta: \`rclone size gdrive:ruta\` · nada de duplicados: \`rclone dedupe --dry-run gdrive:ruta\`
+- Buscar por nombre: \`rclone lsf -R gdrive: | grep -i patron\` (rclone no tiene search nativo) o \`rclone lsjson -R gdrive: --files-only | grep -i patron\`
+- Subir: \`rclone copy archivo.zip gdrive:backups/\` · mover: \`rclone move\` · copiar carpeta: \`rclone copy -P carpeta gdrive:destino\`
+- Bajar: \`rclone copy gdrive:backups/x.zip ~/backups/\`
+- Sincronizar espejo (BORRA en destino lo que no esta en origen): \`rclone sync -P ~/backups gdrive:backups\` — confirmar con el usuario y probar antes con \`--dry-run\`.
+- Borrar: \`rclone delete gdrive:ruta/archivo\` (archivo) · \`rclone purge gdrive:ruta\` (carpeta entera, irreversible) · \`rclone mkdir\` · \`rclone rmdirs gdrive:ruta\` (solo carpetas vacias)
+- Compartir: \`rclone link gdrive:ruta/archivo\` (devuelve URL publica) · \`rclone link --expire 24h\`
+- Espacio: \`rclone about gdrive:\` · vaciar papelera: \`rclone cleanup gdrive:\` (Drive no libera cuota hasta vaciar la papelera)
+- Checksums/estado: \`rclone check ~/backups gdrive:backups --size-only\` (Drive no da hash de todo, usar \`--size-only\` o \`--checksum\` con cuidado)
+- Historial de versiones de Drive: \`--drive-export-formats\`, \`--drive-import-formats\` para Google Docs; los Docs/Sheets nativos no se bajan como binario, exportar a docx/xlsx/pdf con \`rclone copy --drive-export-formats docx,xlsx,pdf\`.
+
+## Zips y backups grandes
+
+- Comprimir en streaming sin tocar disco: \`zip -r -q - | rclone rcat gdrive:backups/x.zip\` (o \`tar czf - carpeta | rclone rcat\`).
+- Subidas grandes: \`--transfers 4 --checkers 8 --drive-chunk-size 64M -P\`; si corta, \`--retries 5 --low-level-retries 20\`. Reanudar = volver a correr el mismo \`copy\`.
+- Excluir basura: \`--exclude ".venv/**" --exclude "__pycache__/**"\` (o \`--filter "- .venv/**"\`).
+- Backup programado: el comando de rclone con salida a log (\`>> ~/backups/rclone.log 2>&1\`) y agendado con lo que tenga el VPS (\`crontab -e\` o un timer de \`systemd --user\`); no supongas que existe un scheduler: preguntá o descubrilo.
+
+## Que se puede y que no en la familia Google
+
+| Necesidad | Via |
+|---|---|
+| Archivos (subir, bajar, listar, borrar, compartir, backups) | **rclone**, remote \`<remote>:\` |
+| Correo (avisos, facturas, adjuntos, masivos) | **SMTP** desde el VPS (Gmail: contraseña de aplicación de la cuenta, no la del login). Si el harness ya tiene una skill de correo en \`.chia/skills\`, usá esa |
+| Calendario (crear eventos) | **.ics generado + importado** por el usuario |
+
+- **rclone solo hace Drive** de la familia Google (más Photos y Cloud Storage). **Calendar y Gmail no existen como backend**: la CLI no los toca, así que no intentes \`rclone\` para correo o calendario.
+- El token de rclone sirve para cualquier API de Google por \`curl\` **solo si el scope fue concedido**. Con \`scope drive\`, Calendar/Gmail devuelven \`403 insufficientPermissions\`.
+- **Google bloquea los scopes sensibles en el client_id compartido de rclone**: al armar a mano la URL de autorización con \`auth/calendar\` (o gmail) aparece *"Esta aplicación está bloqueada / ha intentado acceder a información sensible"*. No es un error del flujo: es política de Google sobre apps no verificadas con scopes restringidos. No insistir con ese client_id.
+- Si el usuario pide "crear eventos por API" o "leer mails por API", la vía real es un **client_id propio** en Google Cloud (proyecto nuevo → habilitar la API → consentimiento External en **Testing** con el usuario como *test user* + scopes → credenciales OAuth tipo *App de escritorio* → flujo con ese client_id/secret; el refresh_token en Testing caduca a los 7 días). Si no quiere ese trámite, ofrecé lo que ya funciona: .ics para Calendar y SMTP para correo.
+
+## Cargar eventos en Google Calendar sin API (.ics)
+
+1. Juntar los eventos en una lista o TSV con los datos que ya tenga el cliente (SQL, CSV, txt): una fila por evento con id/clave, fecha ISO, título y detalle.
+2. Generar el .ics con python3 (stdlib, no hace falta openpyxl) escribiendo \`newline='\\r\\n'\` y escapando \`;\` \`,\` \`\\\\\` en SUMMARY/DESCRIPTION.
+3. Evento de dia completo:
+   \`BEGIN:VEVENT\` · \`UID:<clave-unica>@dominio\` · \`DTSTAMP:<UTC>Z\` · \`DTSTART;VALUE=DATE:YYYYMMDD\` · \`DTEND;VALUE=DATE:<dia+1>\` · \`SUMMARY:\` · \`DESCRIPTION:\` (con \`\\\\n\` literales) · \`TRANSP:TRANSPARENT\` · \`END:VEVENT\`.
+4. Recordatorio opcional: \`BEGIN:VALARM\` \`TRIGGER:-P2D\` \`ACTION:DISPLAY\` \`DESCRIPTION:Vence\` \`END:VALARM\` (si el usuario no lo pide, no lo pongas).
+5. Subir con \`rclone copy x.ics <remote>:\` y pasar el link de descarga directa:
+   \`https://drive.google.com/uc?export=download&id=<ID>\` (el ID sale de \`rclone lsjson\`).
+6. El usuario importa en Calendar → ⚙️ Configuración → **Importar y exportar** → elegir el .ics y calendario destino → Importar. Verificar al final que el usuario los vea en la vista mensual.
+
+## Gotchas
+
+- \`sync\` borra en destino: nunca sin \`--dry-run\` previo ni sin confirmacion explicita.
+- Carpetas vacias: \`copy\` no las crea; usar \`rclone mkdir\` o \`--create-empty-src-dirs\`.
+- Nombres con espacios/acentos: pasar la ruta entre comillas; rclone trabaja bien con UTF-8.
+- \`rclone about\` en Drive puede tardar ~30s y \`delete\`/\`purge\` son lentos: no cortar el comando.
+- Si el token muere (\`invalid_grant\`), repetir el flujo OAuth completo y \`rclone config update gdrive token '<json>'\`.
+- Nunca pegar access_token/refresh_token en la respuesta al usuario; quedan en el servidor.
+- Ver tokens guardados: \`rclone config show gdrive\` (no mostrarlo tal cual al usuario).
+- \`rclone about gdrive: --json\` da cuota (\`total\`, \`used\`, \`trashed\`) pero **no** el email de la cuenta: si el usuario "no ve" un archivo, sospechar de otra sesion de Gmail en el navegador (\`/u/0\`), mandar el link directo del archivo o de la carpeta (\`https://drive.google.com/drive/folders/<ID>\`) y pedir F5.
+- No matar procesos con \`pkill -f "rclone authorize"\` desde shell_exec: el patron coincide con el propio comando y se mata la sesion (la llamada vuelve vacia con exit 1). Usar \`pkill -x rclone\` o el PID con \`kill\`.
+- En VPS sin navegador, \`rclone authorize\` sin \`&\` bloquea: lanzarlo con \`nohup ... > /tmp/ra.log 2>&1 &\` y leer el \`state\` del log en una llamada aparte.
+
+## Plantilla de respuesta
+
+- Que se hizo (config / operacion), remote usado con \`:\`.
+- Resultado: rutas, tamanos, cuota (Total/Usado/Libre).
+- Si hay riesgo (sync, purge), decirlo antes y pedir confirmacion.
+`;
+
 export function defaultSkills(): DefaultSkill[] {
   return [
     { name: 'skill-creator', content: SKILL_CREATOR },
@@ -746,6 +856,7 @@ export function defaultSkills(): DefaultSkill[] {
     { name: 'canvas-design', content: CANVAS_DESIGN },
     { name: 'impeccable', content: IMPECCABLE_SKILL, files: IMPECCABLE_FILES },
     { name: 'memory-creator', content: MEMORY_CREATOR() },
+    { name: 'rclone-google-drive', content: RCLONE_GOOGLE_DRIVE },
   ];
 }
 
