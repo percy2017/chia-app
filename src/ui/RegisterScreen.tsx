@@ -9,6 +9,8 @@ import { AuthLayout } from './auth/Layout';
 import { Button, Field, Notice } from './auth/Field';
 import { PhoneField } from './auth/PhoneField';
 
+import { Focusable } from './Focusable';
+
 type Errors = { name?: string; phone?: string; email?: string };
 
 /** Crea la cuenta en el Studio API y entra directo con el token que devuelve. */
@@ -79,12 +81,12 @@ export function RegisterScreen({
       logo
       onBack={onCancel}
       footer={
-        <Text style={[styles.footerText, { color: c.muted }]}>
-          ¿Ya tenes llave?{' '}
-          <Text style={{ color: c.accent }} onPress={onLogin}>
-            Entrar con Llave
+        <Focusable onPress={onLogin} style={styles.link}>
+          <Text style={[styles.footerText, { color: c.muted }]}>
+            ¿Ya tenes llave?{' '}
+            <Text style={{ color: c.accent }}>Entrar con Llave</Text>
           </Text>
-        </Text>
+        </Focusable>
       }
     >
       {notice ? <Notice tone={notice.tone} text={notice.text} /> : null}
@@ -132,6 +134,11 @@ export function RegisterScreen({
 }
 
 const styles = StyleSheet.create({
+  link: {
+    alignSelf: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+  },
   footerText: {
     fontSize: 12,
     textAlign: 'center',

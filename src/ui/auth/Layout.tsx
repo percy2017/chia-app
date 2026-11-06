@@ -1,10 +1,12 @@
 import React from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Icon } from '../icons';
 import { useTheme } from '../theme';
 import { useKeyboardPad } from './useKeyboardPad';
+
+import { Focusable } from '../Focusable';
 
 /**
  * Marco comun de Register/Login: cabecera con volver opcional, scroll que
@@ -45,7 +47,7 @@ export function AuthLayout({
           ) : null}
           <View style={[styles.header, logo ? styles.headerTight : null]}>
             {onBack ? (
-              <Pressable
+              <Focusable
                 onPress={onBack}
                 hitSlop={12}
                 style={styles.back}
@@ -53,7 +55,7 @@ export function AuthLayout({
                 accessibilityLabel="Volver"
               >
                 <Icon name="arrowLeft" size={20} color={c.text} />
-              </Pressable>
+              </Focusable>
             ) : null}
             {title || subtitle ? (
               <View style={styles.headerText}>

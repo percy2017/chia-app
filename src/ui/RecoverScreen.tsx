@@ -10,6 +10,8 @@ import { Button, Field, Notice } from './auth/Field';
 import { PhoneField } from './auth/PhoneField';
 import { PinBoxes } from './auth/PinBoxes';
 
+import { Focusable } from './Focusable';
+
 const PIN_LENGTH = 4;
 
 /**
@@ -101,12 +103,12 @@ export function RecoverScreen({
       logo
       onBack={onCancel}
       footer={
-        <Text style={[styles.footerText, { color: c.muted }]}>
-          ¿Ya tenes llave?{' '}
-          <Text style={{ color: c.accent }} onPress={onLogin}>
-            Entrar con Llave
+        <Focusable onPress={onLogin} style={styles.link}>
+          <Text style={[styles.footerText, { color: c.muted }]}>
+            ¿Ya tenes llave?{' '}
+            <Text style={{ color: c.accent }}>Entrar con Llave</Text>
           </Text>
-        </Text>
+        </Focusable>
       }
     >
       {notice ? <Notice tone={notice.tone} text={notice.text} /> : null}
@@ -184,6 +186,11 @@ export function RecoverScreen({
 }
 
 const styles = StyleSheet.create({
+  link: {
+    alignSelf: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+  },
   footerText: {
     fontSize: 12,
     textAlign: 'center',

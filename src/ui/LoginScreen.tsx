@@ -8,6 +8,8 @@ import { useTheme } from './theme';
 import { AuthLayout } from './auth/Layout';
 import { Button, Field, Notice } from './auth/Field';
 
+import { Focusable } from './Focusable';
+
 
 export function LoginScreen({
   onDone,
@@ -63,12 +65,12 @@ export function LoginScreen({
       subtitle=""
       onBack={onCancel}
       footer={
-        <Text style={[styles.footerText, { color: c.muted }]}>
-          ¿No tenes cuenta?{' '}
-          <Text style={{ color: c.accent }} onPress={onRegister}>
-            Registrate gratis
+        <Focusable onPress={onRegister} style={styles.link}>
+          <Text style={[styles.footerText, { color: c.muted }]}>
+            ¿No tenes cuenta?{' '}
+            <Text style={{ color: c.accent }}>Registrate gratis</Text>
           </Text>
-        </Text>
+        </Focusable>
       }
     >
       {notice ? <Notice tone={notice.tone} text={notice.text} /> : null}
@@ -101,10 +103,12 @@ export function LoginScreen({
 
       <Button label="Entrar" onPress={onEnter} busy={busy} disabled={busy} />
 
-      <Text style={[styles.recover, { color: c.muted }]} onPress={onRecover}>
-        ¿Olvidaste tu llave?{' '}
-        <Text style={{ color: c.accent }}>Recuperar por WhatsApp</Text>
-      </Text>
+      <Focusable onPress={onRecover} style={styles.link}>
+        <Text style={[styles.recover, { color: c.muted }]}>
+          ¿Olvidaste tu llave?{' '}
+          <Text style={{ color: c.accent }}>Recuperar por WhatsApp</Text>
+        </Text>
+      </Focusable>
     </AuthLayout>
   );
 }
@@ -118,5 +122,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
     marginTop: 14,
+  },
+  link: {
+    alignSelf: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
   },
 });

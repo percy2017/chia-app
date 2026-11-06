@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   FlatList,
   Modal,
-  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -20,6 +19,8 @@ import {
   nationalOf,
 } from './phone';
 import type { Country } from './phone';
+
+import { Focusable } from '../Focusable';
 
 /**
  * Campo de telefono con selector de pais (bandera + prefijo) y formato
@@ -129,7 +130,7 @@ export function PhoneField({
     <View style={styles.field}>
       <Text style={[styles.label, { color: c.muted }]}>{label}</Text>
       <View style={[styles.row, { borderColor, backgroundColor: c.surface }]}>
-        <Pressable
+        <Focusable
           onPress={() => setPicker(true)}
           disabled={!editable}
           style={[styles.country, { borderRightColor: c.border }]}
@@ -141,7 +142,7 @@ export function PhoneField({
             {country ? `+${country.dial}` : '+'}
           </Text>
           <Text style={[styles.caret, { color: c.muted }]}>▾</Text>
-        </Pressable>
+        </Focusable>
         <TextInput
           value={text}
           onChangeText={onChangeText}
@@ -167,8 +168,8 @@ export function PhoneField({
         animationType="fade"
         onRequestClose={() => setPicker(false)}
       >
-        <Pressable style={styles.backdrop} onPress={() => setPicker(false)}>
-          <Pressable
+        <Focusable style={styles.backdrop} onPress={() => setPicker(false)}>
+          <Focusable
             style={[
               styles.sheet,
               {
@@ -198,7 +199,7 @@ export function PhoneField({
               renderItem={({ item }) => {
                 const active = item.code === country?.code;
                 return (
-                  <Pressable
+                  <Focusable
                     onPress={() => onPick(item)}
                     style={[styles.item, { borderBottomColor: c.border }]}
                     accessibilityRole="button"
@@ -212,12 +213,12 @@ export function PhoneField({
                       {item.name}
                     </Text>
                     <Text style={[styles.itemDial, { color: c.muted }]}>+{item.dial}</Text>
-                  </Pressable>
+                  </Focusable>
                 );
               }}
             />
-          </Pressable>
-        </Pressable>
+          </Focusable>
+        </Focusable>
       </Modal>
     </View>
   );

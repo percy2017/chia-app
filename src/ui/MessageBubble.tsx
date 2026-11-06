@@ -7,7 +7,6 @@ import {
   Alert,
   DeviceEventEmitter,
   Image,
-  Pressable,
   StyleSheet,
   Text,
   useWindowDimensions,
@@ -28,6 +27,8 @@ import { Icon } from './icons';
 import { ImageViewer } from './ImageViewer';
 import { Markdown } from './Markdown';
 import { useTheme } from './theme';
+
+import { Focusable } from './Focusable';
 
 function CopyButton({ value }: { value: string }) {
   const { c } = useTheme();
@@ -50,7 +51,7 @@ function CopyButton({ value }: { value: string }) {
   }, [value]);
 
   return (
-    <Pressable
+    <Focusable
       onPress={onCopy}
       hitSlop={10}
       accessibilityRole="button"
@@ -62,7 +63,7 @@ function CopyButton({ value }: { value: string }) {
         size={14}
         color={copied ? c.accent : c.muted}
       />
-    </Pressable>
+    </Focusable>
   );
 }
 
@@ -115,7 +116,7 @@ function ListenButton({
   }, [active, id, preparing, text]);
 
   return (
-    <Pressable
+    <Focusable
       onPress={onPress}
       hitSlop={10}
       accessibilityRole="button"
@@ -128,7 +129,7 @@ function ListenButton({
       {typeof seconds === 'number' && seconds > 0
         ? <Text style={[styles.stamp, { color }]}>{formatAudio(seconds)}</Text>
         : null}
-    </Pressable>
+    </Focusable>
   );
 }
 
@@ -304,7 +305,7 @@ function AudioChip({
 
   return (
     <View style={[styles.audioChip, { borderColor: isUser ? c.accent : c.border }]}>
-      <Pressable
+      <Focusable
         onPress={onPress}
         hitSlop={8}
         accessibilityRole="button"
@@ -319,7 +320,7 @@ function AudioChip({
                 color={isUser ? c.accent : c.text}
               />
             )}
-      </Pressable>
+      </Focusable>
       <Text style={[styles.audioLabel, { color: isUser ? c.accent : c.muted }]}>
         audio {formatDuration(durationMs)}
       </Text>
@@ -365,7 +366,7 @@ function Thumb({
   const [loading, setLoading] = useState(true);
 
   return (
-    <Pressable
+    <Focusable
       onPress={onPress}
       style={({ pressed }) => [styles.thumb, pressed ? styles.thumbPressed : null]}
       accessibilityRole="imagebutton"
@@ -398,7 +399,7 @@ function Thumb({
       <View style={styles.thumbHint} pointerEvents="none">
         <Icon name="eye" size={11} color="#ffffff" />
       </View>
-    </Pressable>
+    </Focusable>
   );
 }
 
@@ -528,7 +529,7 @@ export const MessageBubble = React.memo(function MessageBubble({ message }: { me
           ? (
               <View style={styles.errorBox}>
                 <Text style={[styles.error, { color: c.danger }]}>{message.error}</Text>
-                <Pressable
+                <Focusable
                   onPress={() => {
                     void retry(message.id);
                   }}
@@ -539,7 +540,7 @@ export const MessageBubble = React.memo(function MessageBubble({ message }: { me
                 >
                   <Icon name="refresh" size={13} color={c.accent} strokeWidth={2} />
                   <Text style={[styles.retryText, { color: c.accent }]}>Reintentar</Text>
-                </Pressable>
+                </Focusable>
               </View>
             )
           : null}

@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Modal, StyleSheet, Text, View } from 'react-native';
 
 import { onDownloadProgress, updateNative } from '../update/native';
 import type { UpdateInfo } from '../update/check';
 import { Icon } from './icons';
 import { useTheme } from './theme';
+
+import { Focusable } from './Focusable';
 
 type Phase = 'idle' | 'permission' | 'downloading' | 'ready' | 'done' | 'error';
 
@@ -176,7 +178,7 @@ export function UpdateModal({
                 <View style={styles.actions}>
                   {phase === 'done'
                     ? (
-                        <Pressable
+                        <Focusable
                           onPress={onLater}
                           style={({ pressed }) => [
                             styles.primary,
@@ -184,13 +186,13 @@ export function UpdateModal({
                           ]}
                         >
                           <Text style={[styles.primaryText, { color: c.onAccent }]}>Entendido</Text>
-                        </Pressable>
+                        </Focusable>
                       )
                     : (
                         <>
                           {!info.obligatoria
                             ? (
-                                <Pressable
+                                <Focusable
                                   onPress={onLater}
                                   style={({ pressed }) => [
                                     styles.ghost,
@@ -200,10 +202,10 @@ export function UpdateModal({
                                   <Text style={[styles.ghostText, { color: c.muted }]}>
                                     Despues
                                   </Text>
-                                </Pressable>
+                                </Focusable>
                               )
                             : null}
-                          <Pressable
+                          <Focusable
                             onPress={() => void install()}
                             style={({ pressed }) => [
                               styles.primary,
@@ -215,7 +217,7 @@ export function UpdateModal({
                                 ? 'Reintentar'
                                 : 'Actualizar'}
                             </Text>
-                          </Pressable>
+                          </Focusable>
                         </>
                       )}
                 </View>
@@ -223,11 +225,11 @@ export function UpdateModal({
 
           {!info.obligatoria && !busy && phase !== 'done'
             ? (
-                <Pressable onPress={onSkip} hitSlop={8} accessibilityRole="button">
+                <Focusable onPress={onSkip} hitSlop={8} accessibilityRole="button">
                   <Text style={[styles.skip, { color: c.muted }]}>
                     No volver a avisar de esta version
                   </Text>
-                </Pressable>
+                </Focusable>
               )
             : null}
         </View>

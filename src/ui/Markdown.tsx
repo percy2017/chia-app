@@ -4,7 +4,6 @@ import {
   Alert,
   Linking,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,6 +12,8 @@ import {
 
 import { Icon } from './icons';
 import { useTheme } from './theme';
+
+import { Focusable } from './Focusable';
 
 const mono = Platform.select({ ios: 'Menlo', android: 'monospace' });
 
@@ -164,7 +165,7 @@ function CopyCode({ value }: { value: string }) {
   }, [value]);
 
   return (
-    <Pressable
+    <Focusable
       onPress={onPress}
       hitSlop={10}
       accessibilityRole="button"
@@ -172,7 +173,7 @@ function CopyCode({ value }: { value: string }) {
       style={styles.copyCode}
     >
       <Icon name={copied ? 'check' : 'copy'} size={12} color={copied ? c.accent : c.muted} />
-    </Pressable>
+    </Focusable>
   );
 }
 

@@ -1,6 +1,7 @@
 import { CHIA_MEMORY_DIR, CHIA_SKILLS_DIR, ensurePhoneDir, phoneExists } from '../chia/fs';
 import { getToolsConfig } from '../settings/store';
 import { writePhoneTextFile } from '../phone/files';
+import { CLEANYOURTV } from './cleanyourtv';
 import { IMPECCABLE_FILES, IMPECCABLE_SKILL } from './impeccable';
 
 const SKILL_CREATOR = `---
@@ -857,6 +858,7 @@ export function defaultSkills(): DefaultSkill[] {
     { name: 'impeccable', content: IMPECCABLE_SKILL, files: IMPECCABLE_FILES },
     { name: 'memory-creator', content: MEMORY_CREATOR() },
     { name: 'rclone-google-drive', content: RCLONE_GOOGLE_DRIVE },
+    { name: 'cleanyourtv', content: CLEANYOURTV },
   ];
 }
 

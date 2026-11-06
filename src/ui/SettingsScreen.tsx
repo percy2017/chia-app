@@ -13,7 +13,6 @@ import {
   Keyboard,
   Modal,
   PanResponder,
-  Pressable,
   ScrollView,
   SectionList,
   StyleSheet,
@@ -37,6 +36,8 @@ import type { DoctorCheck } from '../settings/doctor';
 import { Icon } from './icons';
 import type { IconName } from './icons';
 import { useTheme } from './theme';
+
+import { Focusable } from './Focusable';
 
 
 type Draft = {
@@ -149,14 +150,14 @@ function FieldLabel({
       <View style={styles.labelRow}>
         <Text style={[styles.label, { color }]}>{label}</Text>
         {about ? (
-          <Pressable
+          <Focusable
             onPress={() => Alert.alert(label, about)}
             hitSlop={10}
             accessibilityRole="button"
             accessibilityLabel={`Que hace ${label}`}
           >
             <Icon name="info" size={12} color={muted} />
-          </Pressable>
+          </Focusable>
         ) : null}
       </View>
       {hint ? <Text style={[styles.hint, { color: muted }]}>{hint}</Text> : null}
@@ -450,7 +451,7 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
               const active = option.value === field.value;
               const tint = active ? c.accent : c.muted;
               return (
-                <Pressable
+                <Focusable
                   key={option.value}
                   onPress={() => field.onSelect(option.value)}
                   accessibilityRole="radio"
@@ -473,7 +474,7 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
                         </Text>
                       )
                     : null}
-                </Pressable>
+                </Focusable>
               );
             })}
           </View>
@@ -496,7 +497,7 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
                   thumbColor={c.onAccent}
                 />
               ) : (
-                <Pressable
+                <Focusable
                   onPress={() => setPicker({
                     title: cell.label,
                     options: cell.options,
@@ -510,7 +511,7 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
                     {cell.options.find(option => option.value === cell.value)?.label
                       ?? cell.value}
                   </Text>
-                </Pressable>
+                </Focusable>
               )}
             </View>
           ))}
@@ -520,7 +521,7 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
     if (field.kind === 'pairSelectSwitch') {
       return (
         <View key={`f-${index}`} style={styles.cardRow}>
-          <Pressable
+          <Focusable
             onPress={() => setPicker({
               title: field.select.label,
               options: field.select.options,
@@ -536,7 +537,7 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
               {field.select.options.find(option => option.value === field.select.value)?.label
                 ?? field.select.value}
             </Text>
-          </Pressable>
+          </Focusable>
           <View style={styles.pairCol}>
             <Text style={[styles.cardLabel, { color: c.muted }]}>{field.toggle.label}</Text>
             <Switch
@@ -593,14 +594,14 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
               />
               {field.left.secure
                 ? (
-                    <Pressable
+                    <Focusable
                       onPress={() => setRevealed(current => ({ ...current, [field.left.key]: !current[field.left.key] }))}
                       hitSlop={8}
                       accessibilityRole="button"
                       accessibilityLabel={revealed[field.left.key] ? 'Ocultar' : 'Mostrar'}
                     >
                       <Icon name={revealed[field.left.key] ? 'eyeOff' : 'eye'} size={14} color={c.muted} />
-                    </Pressable>
+                    </Focusable>
                   )
                 : null}
             </View>
@@ -622,14 +623,14 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
               />
               {field.right.secure
                 ? (
-                    <Pressable
+                    <Focusable
                       onPress={() => setRevealed(current => ({ ...current, [field.right.key]: !current[field.right.key] }))}
                       hitSlop={8}
                       accessibilityRole="button"
                       accessibilityLabel={revealed[field.right.key] ? 'Ocultar' : 'Mostrar'}
                     >
                       <Icon name={revealed[field.right.key] ? 'eyeOff' : 'eye'} size={14} color={c.muted} />
-                    </Pressable>
+                    </Focusable>
                   )
                 : null}
             </View>
@@ -687,7 +688,7 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
                   <Text style={[styles.cardTitle, { color: c.accent }]}>{item.title}</Text>
                   {item.action
                     ? (
-                        <Pressable
+                        <Focusable
                           onPress={item.action.onPress}
                           hitSlop={12}
                           accessibilityRole="button"
@@ -695,7 +696,7 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
                           style={({ pressed }) => [styles.cardHeaderAction, { opacity: pressed ? 0.6 : 1 }]}
                         >
                           <Icon name="refresh" size={14} color={c.accent} strokeWidth={1.9} />
-                        </Pressable>
+                        </Focusable>
                       )
                     : null}
                 </View>
@@ -759,16 +760,16 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
     >
       <View style={[styles.root, { paddingBottom: bottom }]}>
       <View style={[styles.header, { borderBottomColor: c.border }]}>
-        <Pressable
+        <Focusable
           onPress={onClose}
           hitSlop={10}
           accessibilityRole="button"
           accessibilityLabel="Volver"
         >
           <Icon name="arrowLeft" size={18} color={c.text} />
-        </Pressable>
+        </Focusable>
         <Text style={[styles.title, { color: c.text }]}>Configuracion</Text>
-        <Pressable
+        <Focusable
           onPress={openDoctor}
           hitSlop={10}
           accessibilityRole="button"
@@ -776,7 +777,7 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
           style={styles.headerAction}
         >
           <Icon name="stethoscope" size={17} color={c.text} />
-        </Pressable>
+        </Focusable>
       </View>
 
       <SectionList
@@ -796,22 +797,23 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
         animationType="fade"
         onRequestClose={() => setDoctorOpen(false)}
       >
-        <Pressable style={styles.backdrop} onPress={() => setDoctorOpen(false)}>
-          <Pressable
+        <Focusable style={styles.backdrop} focusable={false} onPress={() => setDoctorOpen(false)}>
+          <Focusable
             style={[styles.sheet, { backgroundColor: c.bg, borderColor: c.border }]}
+            focusable={false}
             onPress={() => {}}
           >
             <View style={styles.doctorHead}>
               <Icon name="stethoscope" size={15} color={c.accent} />
               <Text style={[styles.sheetTitle, styles.doctorTitle, { color: c.muted }]}>Doctor</Text>
-              <Pressable
+              <Focusable
                 onPress={() => setDoctorOpen(false)}
                 hitSlop={10}
                 accessibilityRole="button"
                 accessibilityLabel="Cerrar doctor"
               >
                 <Icon name="close" size={14} color={c.muted} />
-              </Pressable>
+              </Focusable>
             </View>
 
             {doctorRunning
@@ -853,7 +855,7 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
             </ScrollView>
 
             <View style={[styles.doctorActions, { borderTopColor: c.border }]}>
-              <Pressable
+              <Focusable
                 onPress={onDoctorFix}
                 disabled={doctorRunning || doctorSummary(doctorChecks).fixable === 0}
                 accessibilityRole="button"
@@ -871,8 +873,8 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
                 >
                   {`Corregir (${doctorSummary(doctorChecks).fixable})`}
                 </Text>
-              </Pressable>
-              <Pressable
+              </Focusable>
+              <Focusable
                 onPress={runDoctorChecks}
                 disabled={doctorRunning}
                 accessibilityRole="button"
@@ -881,10 +883,10 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
                 <Text style={[styles.value, { color: doctorRunning ? c.muted : c.text }]}>
                   Revalidar
                 </Text>
-              </Pressable>
+              </Focusable>
             </View>
-          </Pressable>
-        </Pressable>
+          </Focusable>
+        </Focusable>
       </Modal>
 
       <Modal
@@ -893,20 +895,22 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
         animationType="fade"
         onRequestClose={() => setPicker(null)}
       >
-        <Pressable style={styles.backdrop} onPress={() => setPicker(null)}>
-          <Pressable
+        <Focusable style={styles.backdrop} focusable={false} onPress={() => setPicker(null)}>
+          <Focusable
             style={[styles.sheet, { backgroundColor: c.bg, borderColor: c.border }]}
+            focusable={false}
             onPress={() => {}}
           >
             <Text style={[styles.sheetTitle, { color: c.muted }]}>
               {picker?.title ?? ''}
             </Text>
             <ScrollView style={styles.sheetList} keyboardShouldPersistTaps="handled">
-              {(picker?.options ?? []).map(option => {
+              {(picker?.options ?? []).map((option, index) => {
                 const active = option.value === picker?.value;
                 return (
-                  <Pressable
+                  <Focusable
                     key={option.value}
+                    hasTVPreferredFocus={index === 0}
                     onPress={() => {
                       picker?.onSelect(option.value);
                       setPicker(null);
@@ -924,12 +928,12 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
                       {option.label}
                     </Text>
                     {active ? <Icon name="check" size={14} color={c.accent} /> : null}
-                  </Pressable>
+                  </Focusable>
                 );
               })}
             </ScrollView>
-          </Pressable>
-        </Pressable>
+          </Focusable>
+        </Focusable>
       </Modal>
       </View>
     </SafeAreaView>

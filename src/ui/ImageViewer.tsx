@@ -4,7 +4,6 @@ import {
   Image,
   Modal,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,6 +11,8 @@ import {
 } from 'react-native';
 
 import { Icon } from './icons';
+
+import { Focusable } from './Focusable';
 
 
 export function ImageViewer({
@@ -37,7 +38,7 @@ export function ImageViewer({
       onShow={() => setLoading(true)}
     >
       <View style={styles.root}>
-        <Pressable
+        <Focusable
           style={StyleSheet.absoluteFill}
           onPress={onClose}
           accessibilityRole="button"
@@ -84,7 +85,7 @@ export function ImageViewer({
             )
           : null}
 
-        <Pressable
+        <Focusable
           onPress={onClose}
           hitSlop={14}
           style={styles.close}
@@ -92,7 +93,7 @@ export function ImageViewer({
           accessibilityLabel="Cerrar imagen"
         >
           <Icon name="close" size={18} color="#ffffff" />
-        </Pressable>
+        </Focusable>
 
         {caption
           ? (

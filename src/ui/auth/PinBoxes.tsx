@@ -1,7 +1,9 @@
 import React, { useRef } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { useTheme } from '../theme';
+
+import { Focusable } from '../Focusable';
 
 /**
  * PIN de 6 digitos como cajas OTP.
@@ -47,7 +49,7 @@ export function PinBoxes({
 
   return (
     <View>
-      <Pressable
+      <Focusable
         onPress={() => input.current?.focus()}
         accessibilityRole="none"
         style={styles.row}
@@ -92,7 +94,7 @@ export function PinBoxes({
           style={[styles.hidden, { color: dark ? '#000' : '#fff' }]}
           accessibilityLabel={`PIN de ${length} digitos`}
         />
-      </Pressable>
+      </Focusable>
       {error ? <Text style={[styles.error, { color: c.danger }]}>{error}</Text> : null}
     </View>
   );

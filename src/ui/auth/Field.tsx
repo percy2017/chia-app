@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { KeyboardTypeOptions } from 'react-native';
 
+import { Focusable } from '../Focusable';
 import { Icon } from '../icons';
 import { useTheme } from '../theme';
 
@@ -66,7 +67,7 @@ export function Field({
         ? (
             <View style={styles.row}>
               {input}
-              <Pressable
+              <Focusable
                 onPress={() => setVisible(current => !current)}
                 hitSlop={10}
                 style={styles.eye}
@@ -74,7 +75,7 @@ export function Field({
                 accessibilityLabel={visible ? 'Ocultar' : 'Mostrar'}
               >
                 <Icon name={visible ? 'eyeOff' : 'eye'} size={16} color={c.muted} />
-              </Pressable>
+              </Focusable>
             </View>
           )
         : input}
@@ -105,7 +106,7 @@ export function Button({
   const off = disabled || busy;
   if (variant === 'ghost') {
     return (
-      <Pressable
+      <Focusable
         onPress={onPress}
         disabled={off}
         style={styles.ghost}
@@ -115,12 +116,12 @@ export function Button({
         <Text style={[styles.ghostText, { color: off ? c.muted : c.accent }]}>
           {busy ? '...' : label}
         </Text>
-      </Pressable>
+      </Focusable>
     );
   }
   const background = variant === 'danger' ? c.danger : c.accent;
   return (
-    <Pressable
+    <Focusable
       onPress={onPress}
       disabled={off}
       style={({ pressed }) => [
@@ -133,7 +134,7 @@ export function Button({
       <Text style={[styles.primaryText, { color: c.onAccent }]}>
         {busy ? 'Un momento...' : label}
       </Text>
-    </Pressable>
+    </Focusable>
   );
 }
 

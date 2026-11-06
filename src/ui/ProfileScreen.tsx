@@ -5,7 +5,6 @@ import {
   Alert,
   Linking,
   Modal,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -18,6 +17,7 @@ import { fetchProfile, actualizarAvatar, fetchPlans, paymentUrl } from '../auth/
 import type { PlanOption, UserProfile } from '../auth/profile';
 import { clearAuth, getAuth, setTheme } from '../settings/store';
 import { Avatar } from './Avatar';
+import { Focusable } from './Focusable';
 import { Icon } from './icons';
 import type { IconName } from './icons';
 import { useTheme } from './theme';
@@ -118,14 +118,14 @@ function Row({
       </View>
       {onCopy
         ? (
-            <Pressable
+            <Focusable
               onPress={onCopy}
               hitSlop={10}
               accessibilityRole="button"
               accessibilityLabel={`Copiar ${label}`}
             >
               <Icon name="copy" size={14} color={c.muted} />
-            </Pressable>
+            </Focusable>
           )
         : null}
     </View>
@@ -248,11 +248,12 @@ export function ProfileScreen({
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: c.bg }]} edges={['top', 'left', 'right']}>
       <View style={[styles.header, { borderBottomColor: c.border }]}>
-        <Pressable onPress={onClose} hitSlop={10} accessibilityRole="button" accessibilityLabel="Volver">
+        <Focusable onPress={onClose} hitSlop={10} accessibilityRole="button" accessibilityLabel="Volver">
           <Icon name="arrowLeft" size={18} color={c.text} />
-        </Pressable>
+        </Focusable>
+
         <Text style={[styles.title, { color: c.text }]}>Perfil</Text>
-        <Pressable
+        <Focusable
           onPress={load}
           hitSlop={10}
           accessibilityRole="button"
@@ -260,16 +261,16 @@ export function ProfileScreen({
           style={styles.headerAction}
         >
           <Icon name="refresh" size={17} color={loading ? c.muted : c.text} />
-        </Pressable>
-        <Pressable onPress={onLogout} hitSlop={10} accessibilityRole="button" accessibilityLabel="Cerrar sesion">
+        </Focusable>
+        <Focusable onPress={onLogout} hitSlop={10} accessibilityRole="button" accessibilityLabel="Cerrar sesion">
           <Icon name="logOut" size={17} color={c.danger} />
-        </Pressable>
+        </Focusable>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
         <Card title="Cuenta">
           <View style={styles.heroRow}>
-            <Pressable
+            <Focusable
               onPress={onRefreshAvatar}
               disabled={avatarBusy || !profile}
               style={styles.avatarWrap}
@@ -289,7 +290,7 @@ export function ProfileScreen({
                     </View>
                   )
                 : null}
-            </Pressable>
+            </Focusable>
 
             <View style={styles.heroData}>
               <Text style={[styles.heroName, { color: c.text }]} numberOfLines={1}>
@@ -299,7 +300,7 @@ export function ProfileScreen({
               <View style={styles.heroContact}>
                 {phoneText
                   ? (
-                      <Pressable
+                      <Focusable
                         onPress={() => onCopy('WhatsApp', phoneText)}
                         hitSlop={8}
                         style={styles.contactLine}
@@ -311,12 +312,12 @@ export function ProfileScreen({
                           {phoneText}
                         </Text>
                         <Icon name="copy" size={12} color={c.muted} />
-                      </Pressable>
+                      </Focusable>
                     )
                   : null}
                 {email
                   ? (
-                      <Pressable
+                      <Focusable
                         onPress={() => onCopy('Correo', email)}
                         hitSlop={8}
                         style={styles.contactLine}
@@ -328,7 +329,7 @@ export function ProfileScreen({
                           {email}
                         </Text>
                         <Icon name="copy" size={12} color={c.muted} />
-                      </Pressable>
+                      </Focusable>
                     )
                   : null}
               </View>
@@ -419,15 +420,16 @@ export function ProfileScreen({
                         </>
                       )
                     : null}
-                  <Pressable
+                  <Focusable
                     onPress={openPlans}
+                    hasTVPreferredFocus
                     accessibilityRole="button"
                     accessibilityLabel="Ver planes disponibles"
                     style={[styles.plansLink, { borderColor: c.border }]}
                   >
                     <Icon name="crown" size={14} color={c.accent} />
                     <Text style={[styles.plansLinkText, { color: c.accent }]}>Ver planes</Text>
-                  </Pressable>
+                  </Focusable>
                 </>
               )
             : null}
@@ -446,7 +448,7 @@ export function ProfileScreen({
           ? (
               <Card>
                 <Text style={[styles.error, { color: c.danger }]}>{error}</Text>
-                <Pressable
+                <Focusable
                   onPress={load}
                   accessibilityRole="button"
                   accessibilityLabel="Reintentar"
@@ -454,7 +456,7 @@ export function ProfileScreen({
                 >
                   <Icon name="refresh" size={13} color={c.accent} />
                   <Text style={[styles.retryText, { color: c.accent }]}>reintentar</Text>
-                </Pressable>
+                </Focusable>
               </Card>
             )
           : null}
@@ -471,7 +473,7 @@ export function ProfileScreen({
                 {revealed ? token : '•'.repeat(Math.max(0, token.length))}
               </Text>
             </View>
-            <Pressable
+            <Focusable
               onPress={() => setRevealed(value => !value)}
               hitSlop={10}
               accessibilityRole="button"
@@ -479,15 +481,15 @@ export function ProfileScreen({
               style={styles.tokenIcons}
             >
               <Icon name={revealed ? 'eyeOff' : 'eye'} size={16} color={c.muted} />
-            </Pressable>
-            <Pressable
+            </Focusable>
+            <Focusable
               onPress={() => onCopy('Token', token)}
               hitSlop={10}
               accessibilityRole="button"
               accessibilityLabel="Copiar token"
             >
               <Icon name="copy" size={16} color={c.muted} />
-            </Pressable>
+            </Focusable>
           </View>
 
           <View style={[styles.group, { borderTopColor: c.border }]}>
@@ -496,7 +498,7 @@ export function ProfileScreen({
               {THEMES.map(item => {
                 const active = mode === item.value;
                 return (
-                  <Pressable
+                  <Focusable
                     key={item.value}
                     onPress={() => setTheme(item.value)}
                     accessibilityRole="button"
@@ -508,7 +510,7 @@ export function ProfileScreen({
                     <Text style={[styles.themeLabel, { color: active ? c.accent : c.muted }]}>
                       {item.label}
                     </Text>
-                  </Pressable>
+                  </Focusable>
                 );
               })}
             </View>
@@ -522,21 +524,22 @@ export function ProfileScreen({
         animationType="fade"
         onRequestClose={() => setPlansOpen(false)}
       >
-        <Pressable style={styles.backdrop} onPress={() => setPlansOpen(false)}>
-          <Pressable
+        <Focusable style={styles.backdrop} focusable={false} onPress={() => setPlansOpen(false)}>
+          <Focusable
             style={[styles.sheet, { backgroundColor: c.bg, borderColor: c.border }]}
+            focusable={false}
             onPress={() => {}}
           >
             <View style={styles.sheetHeader}>
               <Text style={[styles.sheetTitle, { color: c.text }]}>Planes</Text>
-              <Pressable
+              <Focusable
                 onPress={() => setPlansOpen(false)}
                 hitSlop={10}
                 accessibilityRole="button"
                 accessibilityLabel="Cerrar planes"
               >
                 <Icon name="close" size={17} color={c.muted} />
-              </Pressable>
+              </Focusable>
             </View>
 
             {plansLoading
@@ -559,7 +562,7 @@ export function ProfileScreen({
                     {plans.map(plan => {
                       const actual = profile?.planId === plan.id;
                       return (
-                        <Pressable
+                        <Focusable
                           key={plan.id}
                           onPress={() => onChoosePlan(plan)}
                           accessibilityRole="button"
@@ -591,7 +594,7 @@ export function ProfileScreen({
                           <Text style={[styles.planPrice, { color: c.accent }]}>
                             {`${plan.precioUsd} $`}
                           </Text>
-                        </Pressable>
+                        </Focusable>
                       );
                     })}
                     {plans.length === 0
@@ -602,8 +605,8 @@ export function ProfileScreen({
                   </ScrollView>
                 )
               : null}
-          </Pressable>
-        </Pressable>
+          </Focusable>
+        </Focusable>
       </Modal>
     </SafeAreaView>
   );

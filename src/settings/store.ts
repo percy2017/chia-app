@@ -100,10 +100,10 @@ function toolsFromGroup(stored: Record<string, string>): ToolsSettings {
   };
 }
 
-/** Estado vacio: nada por defecto, todo lo escribe el usuario. */
+/** Estado vacio: solo el saludo por defecto; el resto lo escribe el usuario. */
 function emptyState(): SettingsState {
   return {
-    systemPrompt: '',
+    systemPrompt: 'Hola soy chia tu asistente virtual, respondo de manera corta y resumida.',
     theme: 'system',
     sidebar: false,
     startOnBoot: true,

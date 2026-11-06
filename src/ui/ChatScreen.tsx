@@ -9,10 +9,10 @@ import React, {
 import {
   Alert,
   AppState,
+  BackHandler,
   FlatList,
   Image,
   Keyboard,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -73,6 +73,8 @@ import { MessageBubble } from './MessageBubble';
 import { StreamBlock } from './StreamBlock';
 import { useTheme } from './theme';
 import { Welcome } from './Welcome';
+import { Focusable } from './Focusable';
+import { useLayout } from './layout';
 
 const LOGO = require('../../assets/chia-logo.png');
 const LOGO_HEAD = require('../../assets/chia-head.png');
@@ -156,6 +158,7 @@ export function ChatScreen({
     getSettingsSnapshot,
     getSettingsSnapshot,
   );
+  const layout = useLayout();
   const skills = useSyncExternalStore(subscribeSkills, getSkillsSnapshot, getSkillsSnapshot);
   const memory = useSyncExternalStore(subscribeMemory, getMemorySnapshot, getMemorySnapshot);
   const [text, setText] = useState('');
@@ -163,6 +166,7 @@ export function ChatScreen({
   const [recording, setRecording] = useState(false);
   const [recordMs, setRecordMs] = useState(0);
   const [recordLevel, setRecordLevel] = useState(0);
+  const autoSendAudio = useRef(false);
 
   const [attachment, setAttachment] = useState<Attachment | null>(null);
   const [busy, setBusy] = useState(false);
@@ -571,6 +575,21 @@ export function ChatScreen({
     return () => subscription.remove();
   }, [recording]);
 
+  // En TV el boton atras (B / back del control) cancela la grabacion.
+  useEffect(() => {
+    if (!recording) {
+      return;
+    }
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      void cancelRecording();
+      setRecording(false);
+      setRecordLevel(0);
+      setRecordMs(0);
+      return true;
+    });
+    return () => subscription.remove();
+  }, [recording]);
+
   const onMic = useCallback(() => {
     if (state.isStreaming || busy) {
       return;
@@ -586,6 +605,7 @@ export function ChatScreen({
             return;
           }
           setRecordMs(0);
+          autoSendAudio.current = true;
           setAudio(stopped);
         })
         .catch((error: unknown) => {
@@ -759,6 +779,15 @@ export function ChatScreen({
     void send(currentText);
   }, [attachment, audio, busy, canSend, jumpToLatest, onCommand, showToast, text]);
 
+  // Audio primero: al terminar la grabacion se transcribe y se envia solo.
+  useEffect(() => {
+    if (!autoSendAudio.current || !audio || recording || busy) {
+      return;
+    }
+    autoSendAudio.current = false;
+    onSend();
+  }, [audio, busy, onSend, recording]);
+
   const onEditQueued = useCallback((id: string, value: string) => {
     setText(current => (current.trim() ? `${current} ${value}` : value));
     removeQueued(id);
@@ -784,10 +813,10 @@ export function ChatScreen({
       >
         <View style={styles.brand}>
           <Image source={LOGO_HEAD} style={styles.logo} accessibilityLabel="ChiaNative" />
-          <Text style={[styles.title, { color: c.text }]}>Chia Agente</Text>
+          <Text style={[styles.title, { color: c.text, fontSize: layout.s(18) }]}>Chia Agente</Text>
         </View>
         <View style={styles.headerActions}>
-          <Pressable
+          <Focusable
             onPress={() => setSidebar(!settings.sidebar)}
             hitSlop={10}
             accessibilityLabel="Metricas del chat"
@@ -795,23 +824,23 @@ export function ChatScreen({
             style={styles.headerAction}
           >
             <Icon name="chart" size={18} color={settings.sidebar ? c.accent : c.text} />
-          </Pressable>
-          <Pressable
+          </Focusable>
+          <Focusable
             onPress={onOpenSettings}
             hitSlop={10}
             accessibilityLabel="Configuracion"
             style={styles.headerAction}
           >
             <Icon name="settings" size={18} color={c.text} />
-          </Pressable>
-          <Pressable
+          </Focusable>
+          <Focusable
             onPress={onOpenProfile}
             hitSlop={10}
             accessibilityLabel="Perfil"
             style={styles.headerAction}
           >
             <Icon name="user" size={18} color={c.text} />
-          </Pressable>
+          </Focusable>
         </View>
       </View>
 
@@ -840,7 +869,7 @@ export function ChatScreen({
 
       {awayFromLatest
         ? (
-            <Pressable
+            <Focusable
               onPress={jumpToLatest}
               style={[
                 styles.jump,
@@ -855,7 +884,7 @@ export function ChatScreen({
               accessibilityLabel="Ir al ultimo mensaje"
             >
               <Icon name="arrowDown" size={18} color={c.accent} />
-            </Pressable>
+            </Focusable>
           )
         : null}
 
@@ -869,7 +898,7 @@ export function ChatScreen({
 
       {/* Al tocar fuera del sidebar (mensajes, cabecera, composer) se cierra. */}
       {settings.sidebar ? (
-        <Pressable
+        <Focusable
           style={styles.backdrop}
           onPress={closeSidebar}
           accessibilityLabel="Cerrar metricas"
@@ -886,14 +915,14 @@ export function ChatScreen({
           <View style={styles.sidebarHead}>
             <Text style={[styles.sidebarTitle, { color: c.text }]}>Estado</Text>
             <View style={styles.sidebarActions}>
-              <Pressable
+              <Focusable
                 onPress={() => setSidebar(false)}
                 hitSlop={10}
                 accessibilityLabel="Cerrar metricas"
                 style={styles.sidebarAction}
               >
                 <Icon name="close" size={16} color={c.muted} />
-              </Pressable>
+              </Focusable>
             </View>
           </View>
 
@@ -1030,14 +1059,14 @@ export function ChatScreen({
                         {skill.description}
                       </Text>
                     </View>
-                    <Pressable
+                    <Focusable
                       onPress={() => onDeleteSkill(skill.name, skill.baseDir)}
                       hitSlop={8}
                       accessibilityRole="button"
                       accessibilityLabel={`Borrar skill ${skill.name}`}
                     >
                       <Icon name="trash" size={13} color={c.muted} />
-                    </Pressable>
+                    </Focusable>
                   </View>
                 ))}
 
@@ -1067,14 +1096,14 @@ export function ChatScreen({
                           )
                         : null}
                     </View>
-                    <Pressable
+                    <Focusable
                       onPress={() => onDeleteMemory(note.name, note.path)}
                       hitSlop={8}
                       accessibilityRole="button"
                       accessibilityLabel={`Borrar memoria ${note.name}`}
                     >
                       <Icon name="trash" size={13} color={c.muted} />
-                    </Pressable>
+                    </Focusable>
                   </View>
                 ))}
             <View style={[styles.skillHeader, { borderTopColor: c.border }]}>
@@ -1102,14 +1131,14 @@ export function ChatScreen({
                         {doc.bytes > 0 ? ` · ${formatSize(doc.bytes)}` : ''}
                       </Text>
                     </View>
-                    <Pressable
+                    <Focusable
                       onPress={() => onDeleteDoc(doc.id, doc.name)}
                       hitSlop={8}
                       accessibilityRole="button"
                       accessibilityLabel={`Borrar ${doc.name} del RAG`}
                     >
                       <Icon name="trash" size={13} color={c.muted} />
-                    </Pressable>
+                    </Focusable>
                   </View>
                 ))}
           </ScrollView>
@@ -1130,7 +1159,7 @@ export function ChatScreen({
                 ]}
               >
                 {commands.map(item => (
-                  <Pressable
+                  <Focusable
                     key={item.name}
                     onPress={() => setText(`${item.name} `)}
                     accessibilityRole="button"
@@ -1146,7 +1175,7 @@ export function ChatScreen({
                     >
                       {item.hint}
                     </Text>
-                  </Pressable>
+                  </Focusable>
                 ))}
               </View>
             )
@@ -1164,14 +1193,14 @@ export function ChatScreen({
                     ? `${attachment.name}  ·  indexando...`
                     : `${attachment.name}  ${formatSize(attachment.size)}`}
                 </Text>
-                <Pressable
+                <Focusable
                   onPress={() => setAttachment(null)}
                   hitSlop={10}
                   accessibilityRole="button"
                   accessibilityLabel="Quitar adjunto"
                 >
                   <Icon name="close" size={13} color={c.muted} />
-                </Pressable>
+                </Focusable>
               </View>
             )
           : null}
@@ -1187,7 +1216,7 @@ export function ChatScreen({
                 </Text>
                 {state.queued.map(item => (
                   <View key={item.id} style={[styles.queueChip, { borderColor: c.border }]}>
-                    <Pressable
+                    <Focusable
                       onPress={() => setQueuedFollowUp(item.id, !item.followUp)}
                       hitSlop={8}
                       accessibilityRole="button"
@@ -1197,8 +1226,8 @@ export function ChatScreen({
                       <Text style={[styles.queueLabel, { color: c.accent }]}>
                         {item.followUp ? 'despues' : 'en cola'}
                       </Text>
-                    </Pressable>
-                    <Pressable
+                    </Focusable>
+                    <Focusable
                       onPress={() => onEditQueued(item.id, item.text)}
                       style={styles.queueTextWrap}
                       accessibilityRole="button"
@@ -1207,15 +1236,15 @@ export function ChatScreen({
                       <Text style={[styles.queueText, { color: c.muted }]}>
                         {item.text}
                       </Text>
-                    </Pressable>
-                    <Pressable
+                    </Focusable>
+                    <Focusable
                       onPress={() => removeQueued(item.id)}
                       hitSlop={10}
                       accessibilityRole="button"
                       accessibilityLabel="Quitar de la cola"
                     >
                       <Icon name="close" size={12} color={c.muted} />
-                    </Pressable>
+                    </Focusable>
                   </View>
                 ))}
               </ScrollView>
@@ -1236,15 +1265,15 @@ export function ChatScreen({
                     ]}
                   />
                 </View>
-                <Text style={[styles.recHint, { color: c.muted }]}>toca cuadro para terminar</Text>
-                <Pressable
+                <Text style={[styles.recHint, { color: c.muted }]}>boton cuadrado para terminar</Text>
+                <Focusable
                   onPress={onCancelAudio}
                   hitSlop={10}
                   accessibilityRole="button"
                   accessibilityLabel="Cancelar grabacion"
                 >
                   <Icon name="close" size={13} color={c.muted} />
-                </Pressable>
+                </Focusable>
               </View>
             )
           : null}
@@ -1258,7 +1287,7 @@ export function ChatScreen({
                       ? 'transcribiendo...'
                       : `audio ${formatAudioDuration(audio.durationMs)} · ${formatSize(audio.bytes)}`}
                   </Text>
-                  <Pressable
+                  <Focusable
                     onPress={() => {
                       void playFile(audio.path).catch((error: unknown) => {
                         Alert.alert(
@@ -1272,15 +1301,15 @@ export function ChatScreen({
                     accessibilityLabel="Reproducir audio"
                   >
                     <Icon name="play" size={12} color={c.muted} />
-                  </Pressable>
-                  <Pressable
+                  </Focusable>
+                  <Focusable
                     onPress={onCancelAudio}
                     hitSlop={10}
                     accessibilityRole="button"
                     accessibilityLabel="Quitar audio"
                   >
                     <Icon name="close" size={12} color={c.muted} />
-                  </Pressable>
+                  </Focusable>
                 </View>
               </View>
             )
@@ -1293,7 +1322,7 @@ export function ChatScreen({
                   { backgroundColor: c.surface, borderColor: c.border },
                 ]}
               >
-                <Pressable
+                <Focusable
                   onPress={() => {
                     setAttachMenu(false);
                     onPickImage();
@@ -1303,8 +1332,8 @@ export function ChatScreen({
                   style={styles.attachItem}
                 >
                   <Icon name="image" size={18} color={c.text} />
-                </Pressable>
-                <Pressable
+                </Focusable>
+                <Focusable
                   onPress={() => {
                     setAttachMenu(false);
                     onPickFile();
@@ -1314,42 +1343,32 @@ export function ChatScreen({
                   style={styles.attachItem}
                 >
                   <Icon name="fileText" size={18} color={c.text} />
-                </Pressable>
-                <Pressable
-                  onPress={() => {
-                    setAttachMenu(false);
-                    onMic();
-                  }}
-                  accessibilityRole="button"
-                  accessibilityLabel="Microfono"
-                  style={styles.attachItem}
-                >
-                  <Icon name="mic" size={18} color={c.text} />
-                </Pressable>
+                </Focusable>
               </View>
             )
           : null}
         <View style={styles.composerRow}>
-          <Pressable
-            onPress={recording ? onMic : () => setAttachMenu(current => !current)}            disabled={state.isStreaming}
+          <Focusable
+            onPress={() => setAttachMenu(current => !current)}
+            disabled={state.isStreaming}
             accessibilityRole="button"
-            accessibilityLabel={recording ? 'Terminar grabacion' : 'Adjuntar o grabar'}
+            accessibilityLabel="Adjuntar"
             accessibilityState={{ expanded: attachMenu }}
             style={[
               styles.attach,
               {
-                borderColor: recording ? c.danger : (attachMenu ? c.accent : c.border),
+                borderColor: attachMenu ? c.accent : c.border,
                 opacity: state.isStreaming ? 0.35 : 1,
               },
             ]}
           >
             <Icon
-              name={recording ? 'stop' : 'plus'}
-              size={recording ? 13 : 19}
-              color={recording ? c.danger : (attachMenu ? c.accent : (state.isStreaming ? c.muted : c.text))}
+              name="plus"
+              size={19}
+              color={attachMenu ? c.accent : (state.isStreaming ? c.muted : c.text)}
               strokeWidth={2.1}
             />
-          </Pressable>
+          </Focusable>
           <TextInput
             value={text}
             onChangeText={setText}
@@ -1363,47 +1382,54 @@ export function ChatScreen({
                 color: c.text,
                 backgroundColor: c.surface,
                 borderColor: c.border,
+                fontSize: layout.s(15),
               },
             ]}
           />
           {state.isStreaming && text.trim().length > 0
             ? (
-                <Pressable
+                <Focusable
                   onPress={onQueue}
                   accessibilityRole="button"
                   accessibilityLabel="Encolar mensaje"
                   style={[styles.button, { backgroundColor: c.accent }]}
                 >
                   <Icon name="send" size={19} color={c.onAccent} strokeWidth={2} />
-                </Pressable>
+                </Focusable>
               )
             : null}
-          <Pressable
-            onPress={state.isStreaming ? stop : onSend}
-            disabled={!state.isStreaming && !canSend}
+          <Focusable
+            onPress={state.isStreaming ? stop : (recording || !canSend ? onMic : onSend)}
             accessibilityRole="button"
-            accessibilityLabel={state.isStreaming ? 'Detener' : 'Enviar'}
+            accessibilityLabel={state.isStreaming
+              ? 'Detener'
+              : recording
+                ? 'Terminar grabacion'
+                : canSend
+                  ? 'Enviar'
+                  : 'Grabar audio'}
+            hasTVPreferredFocus
             style={[
               styles.button,
               {
-                backgroundColor: state.isStreaming ? c.danger : c.accent,
-                opacity: !state.isStreaming && !canSend ? 0.4 : 1,
+                backgroundColor: state.isStreaming || recording ? c.danger : c.accent,
+                opacity: !state.isStreaming && !recording && !canSend ? 0.6 : 1,
               },
             ]}
           >
             <Icon
-              name={state.isStreaming ? 'stop' : 'send'}
-              size={state.isStreaming ? 13 : 19}
+              name={state.isStreaming || recording ? 'stop' : (canSend ? 'send' : 'mic')}
+              size={state.isStreaming || recording ? 13 : 19}
               color={c.onAccent}
               strokeWidth={2.3}
             />
-          </Pressable>
+          </Focusable>
         </View>
       </View>
 
       {toast
         ? (
-            <Pressable
+            <Focusable
               onPress={() => setToast(null)}
               accessibilityRole="alert"
               accessibilityLabel={toast}
@@ -1411,7 +1437,7 @@ export function ChatScreen({
             >
               <Icon name="info" size={15} color={c.danger} />
               <Text style={[styles.toastText, { color: c.text }]} numberOfLines={4}>{toast}</Text>
-            </Pressable>
+            </Focusable>
           )
         : null}
 
