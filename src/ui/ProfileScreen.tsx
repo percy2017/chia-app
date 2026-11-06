@@ -3,6 +3,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Linking,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,8 +14,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { authMessage } from '../auth/api';
-import { fetchProfile, actualizarAvatar } from '../auth/profile';
-import type { UserProfile } from '../auth/profile';
+import { fetchProfile, actualizarAvatar, fetchPlans, paymentUrl } from '../auth/profile';
+import type { PlanOption, UserProfile } from '../auth/profile';
 import { clearAuth, getAuth, setTheme } from '../settings/store';
 import { Avatar } from './Avatar';
 import { Icon } from './icons';
@@ -145,6 +147,10 @@ export function ProfileScreen({
   const [loading, setLoading] = useState(true);
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [error, setError] = useState('');
+  const [plansOpen, setPlansOpen] = useState(false);
+  const [plans, setPlans] = useState<PlanOption[]>([]);
+  const [plansLoading, setPlansLoading] = useState(false);
+  const [plansError, setPlansError] = useState('');
 
   const load = useCallback(() => {
     const config = getAuth();
@@ -184,6 +190,35 @@ export function ProfileScreen({
     Clipboard.setString(value);
     Alert.alert('Copiado', `${label}: ${value}`);
   }, []);
+
+  /** Abre el listado de planes (GET /suscripciones) en un modal. */
+  const openPlans = useCallback(() => {
+    setPlansOpen(true);
+    const config = getAuth();
+    if (!config.baseUrl) {
+      setPlansError('Falta el servidor del Studio API.');
+      return;
+    }
+    setPlansLoading(true);
+    setPlansError('');
+    void fetchPlans(config.baseUrl, config.token)
+      .then(setPlans)
+      .catch((failure: unknown) => setPlansError(authMessage(failure)))
+      .finally(() => setPlansLoading(false));
+  }, []);
+
+  /** Plan elegido: abre el navegador en /pago?plan=..&phone=.. */
+  const onChoosePlan = useCallback((plan: PlanOption) => {
+    const config = getAuth();
+    if (!config.baseUrl) {
+      Alert.alert('Pago', 'Falta el servidor del Studio API.');
+      return;
+    }
+    setPlansOpen(false);
+    void Linking.openURL(paymentUrl(config.baseUrl, plan.id, profile?.whatsapp || config.phone)).catch(() => {
+      Alert.alert('Pago', 'No se pudo abrir el navegador.');
+    });
+  }, [profile]);
 
   const onLogout = useCallback(() => {
     Alert.alert('Cerrar sesion', 'Se borra el token de este telefono. ¿Continuar?', [
@@ -384,6 +419,15 @@ export function ProfileScreen({
                         </>
                       )
                     : null}
+                  <Pressable
+                    onPress={openPlans}
+                    accessibilityRole="button"
+                    accessibilityLabel="Ver planes disponibles"
+                    style={[styles.plansLink, { borderColor: c.border }]}
+                  >
+                    <Icon name="crown" size={14} color={c.accent} />
+                    <Text style={[styles.plansLinkText, { color: c.accent }]}>Ver planes</Text>
+                  </Pressable>
                 </>
               )
             : null}
@@ -471,6 +515,96 @@ export function ProfileScreen({
           </View>
         </Card>
       </ScrollView>
+
+      <Modal
+        visible={plansOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPlansOpen(false)}
+      >
+        <Pressable style={styles.backdrop} onPress={() => setPlansOpen(false)}>
+          <Pressable
+            style={[styles.sheet, { backgroundColor: c.bg, borderColor: c.border }]}
+            onPress={() => {}}
+          >
+            <View style={styles.sheetHeader}>
+              <Text style={[styles.sheetTitle, { color: c.text }]}>Planes</Text>
+              <Pressable
+                onPress={() => setPlansOpen(false)}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="Cerrar planes"
+              >
+                <Icon name="close" size={17} color={c.muted} />
+              </Pressable>
+            </View>
+
+            {plansLoading
+              ? (
+                  <View style={styles.center}>
+                    <ActivityIndicator color={c.accent} />
+                  </View>
+                )
+              : null}
+
+            {plansError
+              ? (
+                  <Text style={[styles.error, { color: c.danger }]}>{plansError}</Text>
+                )
+              : null}
+
+            {!plansLoading && !plansError
+              ? (
+                  <ScrollView contentContainerStyle={styles.planList}>
+                    {plans.map(plan => {
+                      const actual = profile?.planId === plan.id;
+                      return (
+                        <Pressable
+                          key={plan.id}
+                          onPress={() => onChoosePlan(plan)}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Pagar plan ${plan.nombre || plan.id}`}
+                          style={[
+                            styles.planRow,
+                            {
+                              backgroundColor: c.surface,
+                              borderColor: actual ? c.accent : c.border,
+                            },
+                          ]}
+                        >
+                          <View style={styles.planText}>
+                            <Text style={[styles.planName, { color: c.text }]}>
+                              {plan.nombre || plan.id}
+                              {actual ? ' · actual' : ''}
+                            </Text>
+                            {plan.descripcion
+                              ? (
+                                  <Text style={[styles.planDesc, { color: c.muted }]} numberOfLines={2}>
+                                    {plan.descripcion}
+                                  </Text>
+                                )
+                              : null}
+                            <Text style={[styles.planMeta, { color: c.muted }]}>
+                              {`${formatInt(plan.creditosDia)} creditos/dia`}
+                            </Text>
+                          </View>
+                          <Text style={[styles.planPrice, { color: c.accent }]}>
+                            {`${plan.precioUsd} $`}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                    {plans.length === 0
+                      ? (
+                          <Text style={[styles.muted, { color: c.muted }]}>Sin planes disponibles.</Text>
+                        )
+                      : null}
+                  </ScrollView>
+                )
+              : null}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -766,6 +900,74 @@ const styles = StyleSheet.create({
   },
   retryText: {
     fontSize: 12,
+    fontWeight: '700',
+  },
+  plansLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 10,
+    paddingVertical: 9,
+    marginTop: 10,
+  },
+  plansLinkText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center',
+    paddingHorizontal: 18,
+  },
+  sheet: {
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 14,
+    gap: 10,
+    maxHeight: '78%',
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  sheetTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  planList: {
+    gap: 8,
+    paddingBottom: 4,
+  },
+  planRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  planText: {
+    flex: 1,
+    gap: 2,
+  },
+  planName: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  planDesc: {
+    fontSize: 11,
+    lineHeight: 15,
+  },
+  planMeta: {
+    fontSize: 11,
+  },
+  planPrice: {
+    fontSize: 14,
     fontWeight: '700',
   },
 });

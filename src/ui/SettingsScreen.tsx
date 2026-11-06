@@ -269,7 +269,7 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
       maxBytesKb: toolsMaxBytesKb,
     });
     const gender = draft.voiceGender === 'hombre' ? 'hombre' : 'mujer';
-    updateVoice({ gender, idioma: 'es' });
+    updateVoice({ gender, idioma: getSnapshot().voice.idioma || 'es' });
     setDraft(current => ({
       ...current,
       toolsMaxChars: String(toolsMaxChars),

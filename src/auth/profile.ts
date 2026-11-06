@@ -277,3 +277,73 @@ export async function actualizarAvatar(
     throw new Error(detail || `El Studio API respondio HTTP ${response.status}.`);
   }
 }
+
+export type PlanOption = {
+  id: string;
+  nombre: string;
+  precioUsd: number;
+  creditosDia: number;
+  descripcion: string;
+};
+
+function toPlanOption(value: unknown): PlanOption {
+  const raw = record(value);
+  return {
+    id: text(raw.id ?? raw.suscripcion_id),
+    nombre: text(raw.nombre),
+    precioUsd: number(raw.precio_usd),
+    creditosDia: number(raw.creditos_dia ?? raw.llamadas_dia),
+    descripcion: text(raw.descripcion),
+  };
+}
+
+/** Planes disponibles: GET /suscripciones (con el token del usuario). */
+export async function fetchPlans(baseUrl: string, token: string): Promise<PlanOption[]> {
+  const base = baseUrl.trim().replace(/\/+$/, '');
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  let response: Response;
+  try {
+    response = await fetch(`${base}/suscripciones`, {
+      headers: { accept: 'application/json', Authorization: `Bearer ${token}` },
+      signal: controller.signal,
+    });
+  }
+  catch (error) {
+    const aborted = error instanceof Error && error.name === 'AbortError';
+    throw new Error(aborted
+      ? 'El Studio API no respondio a tiempo.'
+      : 'No se pudo conectar con el Studio API.');
+  }
+  finally {
+    clearTimeout(timer);
+  }
+
+  if (!response.ok) {
+    const raw = await response.text().catch(() => '');
+    let detail = raw.trim().slice(0, 300);
+    try {
+      const parsed = JSON.parse(raw) as { detail?: unknown };
+      if (typeof parsed.detail === 'string') {
+        detail = parsed.detail;
+      }
+    }
+    catch {
+      // Texto plano.
+    }
+    throw new Error(detail || `El Studio API respondio HTTP ${response.status}.`);
+  }
+
+  const body = await response.json();
+  const list = Array.isArray(body) ? body : record(body).planes;
+  return Array.isArray(list)
+    ? list.map(toPlanOption).filter(plan => plan.id)
+    : [];
+}
+
+/** URL de pago del plan elegido con el whatsapp del usuario. */
+export function paymentUrl(baseUrl: string, planId: string, whatsapp: string): string {
+  const base = baseUrl.trim().replace(/\/+$/, '');
+  const phone = whatsapp.replace(/[^\d]/g, '');
+  return `${base}/pago?plan=${encodeURIComponent(planId)}&phone=${encodeURIComponent(phone)}`;
+}

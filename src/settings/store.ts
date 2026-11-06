@@ -323,7 +323,7 @@ export function hydrateSettings(): void {
         baseUrl: str(voice.baseUrl),
         token: str(voice.token),
         gender: voice.gender === 'hombre' ? 'hombre' : 'mujer',
-        idioma: 'es',
+        idioma: str(voice.idioma) || 'es',
       },
     };
     // El arranque con Android vive en SharedPreferences (funciona con la app

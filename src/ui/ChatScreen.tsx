@@ -72,6 +72,7 @@ import { Icon } from './icons';
 import { MessageBubble } from './MessageBubble';
 import { StreamBlock } from './StreamBlock';
 import { useTheme } from './theme';
+import { Welcome } from './Welcome';
 
 const LOGO = require('../../assets/chia-logo.png');
 const LOGO_HEAD = require('../../assets/chia-head.png');
@@ -818,7 +819,7 @@ export function ChatScreen({
       {state.messages.length === 0
         ? (
             <View style={styles.welcome}>
-              <Image source={LOGO} style={styles.welcomeLogo} accessibilityLabel="ChiaNative" />
+              <Welcome text={settings.systemPrompt} logo={LOGO} />
             </View>
           )
         : (
@@ -1634,13 +1635,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: 32,
-  },
-  welcomeLogo: {
-    alignSelf: 'center',
-    width: 176,
-    height: 176,
-    borderRadius: 14,
-    marginBottom: 50,
   },
   list: {
     paddingHorizontal: 8,
