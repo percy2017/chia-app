@@ -3,6 +3,7 @@ import { phoneNative } from '../phone/native';
 export const CHIA_ROOT = '/sdcard/Android/data/com.chianative/files/.chia';
 export const CHIA_SKILLS_DIR = `${CHIA_ROOT}/skills`;
 export const CHIA_MEMORY_DIR = `${CHIA_ROOT}/memory`;
+export const CHIA_PROMPTS_DIR = `${CHIA_ROOT}/tmp`;
 
 export type PhoneEntry = {
   name: string;

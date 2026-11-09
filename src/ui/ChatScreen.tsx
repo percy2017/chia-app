@@ -36,6 +36,7 @@ import {
   subscribe,
 } from '../agent/controller';
 import { formatTokens, usageTokens } from '../agent/context';
+import { formatBytes, promptLimits, promptOverflow } from '../agent/prompt';
 import { canonicalToolName, TOOL_REGISTRY } from '../agent/tools';
 import {
   getAuth,
@@ -507,6 +508,9 @@ export function ChatScreen({
     && !state.isStreaming
     && !busy
     && !recording;
+  const promptLimit = promptLimits();
+  const overflow = promptOverflow(text, promptLimit);
+  const tooBig = overflow?.tooBig === true;
   const commands = matchCommands(text);
 
   const onPickImage = useCallback(() => {
@@ -676,7 +680,7 @@ export function ChatScreen({
   }, [state.messages.length]);
 
   const onSend = useCallback(() => {
-    if (!canSend) {
+    if (!canSend || tooBig) {
       return;
     }
     const quota = plan.current;
@@ -776,8 +780,13 @@ export function ChatScreen({
       return;
     }
 
-    void send(currentText);
-  }, [attachment, audio, busy, canSend, jumpToLatest, onCommand, showToast, text]);
+    void send(currentText).then((result) => {
+      if (!result.ok && result.error) {
+        setText(currentText);
+        showToast(result.error);
+      }
+    });
+  }, [attachment, audio, busy, canSend, jumpToLatest, onCommand, showToast, text, tooBig]);
 
   // Audio primero: al terminar la grabacion se transcribe y se envia solo.
   useEffect(() => {
@@ -794,12 +803,18 @@ export function ChatScreen({
   }, []);
 
   const onQueue = useCallback(() => {
-    if (!enqueuePrompt(text)) {
-      return;
-    }
-    setText('');
-    setAttachment(null);
-  }, [text]);
+    void enqueuePrompt(text)
+      .then((queued) => {
+        if (!queued) {
+          return;
+        }
+        setText('');
+        setAttachment(null);
+      })
+      .catch((error: unknown) => showToast(
+        error instanceof Error ? error.message : String(error),
+      ));
+  }, [text, showToast]);
 
   return (
     <SafeAreaView
@@ -845,7 +860,7 @@ export function ChatScreen({
       </View>
 
       <View style={styles.body}>
-      {state.messages.length === 0
+      {state.hydrated && state.messages.length === 0 && !streamMessage
         ? (
             <View style={styles.welcome}>
               <Welcome text={settings.systemPrompt} logo={LOGO} />
@@ -1347,6 +1362,21 @@ export function ChatScreen({
               </View>
             )
           : null}
+        {overflow
+          ? (
+              <Text
+                style={[
+                  styles.limitHint,
+                  { color: overflow.tooBig ? c.danger : c.muted, fontSize: layout.s(11) },
+                ]}
+                numberOfLines={2}
+              >
+                {overflow.tooBig
+                  ? `${overflow.chars} chars (${formatBytes(overflow.bytes)}) no entran: tope ${promptLimit.maxChars} chars / ${formatBytes(promptLimit.maxBytes)}. Parte el mensaje.`
+                  : `${overflow.chars} chars pasan el tope de ${promptLimit.maxChars}: se envia como .txt de ${formatBytes(overflow.bytes)}.`}
+              </Text>
+            )
+          : null}
         <View style={styles.composerRow}>
           <Focusable
             onPress={() => setAttachMenu(current => !current)}
@@ -1693,6 +1723,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     gap: 6,
     borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  limitHint: {
+    paddingHorizontal: 8,
   },
   toast: {
     position: 'absolute',

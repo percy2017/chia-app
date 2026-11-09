@@ -156,7 +156,7 @@ function readDefinition() {
         properties: {
           path: {
             type: 'string',
-            description: 'Ruta del archivo (relativa o absoluta).',
+            description: 'Ruta del archivo (relativa o absoluta), o url http(s) si es un video.',
           },
           target: {
             type: 'string',

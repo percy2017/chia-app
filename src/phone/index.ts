@@ -2,7 +2,6 @@ import type { PhoneArgs } from './args';
 
 import Clipboard from '@react-native-clipboard/clipboard';
 
-import { getToolsConfig } from '../settings/store';
 import { phoneNative } from './native';
 
 export type PhoneOutcome = {
@@ -14,13 +13,6 @@ export type PhoneOutcome = {
 
 export function phoneCommand(args: PhoneArgs): string {
   return `android_phone ${args.action}`;
-}
-
-function truncate(text: string, maxChars: number): string {
-  if (maxChars > 0 && text.length > maxChars) {
-    return `${text.slice(0, maxChars)}\n[truncated]`;
-  }
-  return text;
 }
 
 function pretty(raw: string): string {
@@ -54,8 +46,7 @@ async function dispatch(args: PhoneArgs): Promise<string> {
     case 'clipboard.get': {
       // Android 10+ devuelve vacio si la app no esta en primer plano.
       const text = await Clipboard.getString();
-      const maxChars = getToolsConfig().maxChars;
-      return JSON.stringify({ chars: text.length, text: text.slice(0, maxChars) });
+      return JSON.stringify({ chars: text.length, text });
     }
     case 'clipboard.set': {
       Clipboard.setString(String(a.text ?? ''));
@@ -289,11 +280,10 @@ async function dispatch(args: PhoneArgs): Promise<string> {
 
 export async function runPhoneTool(args: PhoneArgs): Promise<PhoneOutcome> {
   const started = Date.now();
-  const maxChars = getToolsConfig().maxChars;
   try {
     const output = await dispatch(args);
     return {
-      output: truncate(output, maxChars),
+      output,
       exitCode: 0,
       durationMs: Date.now() - started,
       isError: false,
@@ -302,7 +292,7 @@ export async function runPhoneTool(args: PhoneArgs): Promise<PhoneOutcome> {
   catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     return {
-      output: truncate(`phone ${args.action}: ${message}`, maxChars),
+      output: `phone ${args.action}: ${message}`,
       exitCode: 1,
       durationMs: Date.now() - started,
       isError: true,

@@ -20,13 +20,6 @@ const CONNECTION_ERRORS = [
 
 let activeKey = '';
 
-export function truncateOutput(value: string): string {
-  const { maxChars, headChars, tailChars } = getToolsConfig();
-  if (value.length <= maxChars) {
-    return value;
-  }
-  return `${value.slice(0, headChars)}\n\n...[salida truncada: ${value.length - headChars - tailChars} caracteres]...\n\n${value.slice(-tailChars)}`;
-}
 
 export async function ensureSsh(profile: SshProfile): Promise<void> {
   if (!profile.host.trim() || !profile.username.trim()) {
@@ -133,7 +126,7 @@ export async function runShellTool(
   return {
     toolCallId: '',
     command,
-    output: truncateOutput(result.output),
+    output: result.output,
     exitCode: result.exitCode,
     durationMs: Date.now() - startedAt,
     isError: result.exitCode !== 0 || result.timedOut,

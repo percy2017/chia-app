@@ -19,6 +19,7 @@ export function readToolDescription(): string {
   return `Lee un archivo de texto o imagen (vision): VPS por SSH (defecto) o telefono con target:"phone" (/sdcard).
 - Texto: hasta ${tools.maxBytesKb} KB por llamada (usa offset/limit para paginar). Si queda contenido lo avisa al final ("Use offset=N to continue"): repite con offset o acota con limit.
 - Imagenes (jpg, png, gif, webp, bmp): llegan como adjunto; maximo ${Math.round(tools.maxBytes / 1024)} KB.
+- Video (mp4, mkv, mov, webm, m4v, avi, 3gp): pasale el path del VPS o una url http(s) directa y devuelve TEXTO (el servidor saca los fotogramas, transcribe el audio y lo describe). Tarda ~1,2x el largo del video y gasta 2 creditos; el telefono no sirve para esto.
 - No escribe: para cambiar usa edit (puntual) o write (completo).
 - target: "vps" (defecto) o "phone" (mismos path, offset y limit).`;
 }

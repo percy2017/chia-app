@@ -11,6 +11,7 @@ import type {
 import type { SshProfile } from '../ssh/types';
 
 import { startKeepAlive, stopKeepAlive } from './keepAlive';
+import { preparePrompt, spillLongOutput } from './prompt';
 import {
   clearMessages,
   deleteMessage,
@@ -27,7 +28,7 @@ import {
 import { ensureEnvironment } from '../device/environment';
 import { interruptSsh } from '../ssh/client';
 import { editCommand, parseEditArgs, runEditTool } from '../ssh/edit';
-import { parseReadArgs, readCommand, runReadTool } from '../ssh/read';
+import { isVideoPath, parseReadArgs, readCommand, runReadTool } from '../ssh/read';
 import { parseWriteArgs, runWriteTool, writeCommand } from '../ssh/write';
 import { invalidateMemory, maybeSyncMemory, syncMemory } from '../memory/store';
 import { findSkill, invalidateSkills, maybeSyncSkills, syncSkills } from '../skills/store';
@@ -51,6 +52,8 @@ export type AgentState = {
   isStreaming: boolean;
   error: string | null;
   queued: QueuedPrompt[];
+  /** false hasta que terminó de leer el historial de SQLite. */
+  hydrated: boolean;
 };
 
 const SAVE_DELAY_MS = 250;
@@ -62,6 +65,7 @@ let state: AgentState = {
   isStreaming: false,
   error: null,
   queued: [],
+  hydrated: false,
 };
 let activeStream: ChatStream | null = null;
 let publishDeltas: (() => void) | null = null;
@@ -98,13 +102,14 @@ function syncQueued() {
 }
 
 /** Encola un prompt para el proximo turno (el usuario escribio mientras corria). */
-export function enqueuePrompt(text: string, followUp = false): boolean {
+export async function enqueuePrompt(text: string, followUp = false): Promise<boolean> {
   const typed = text.trim();
   if (!typed) {
     return false;
   }
   // Se expande igual que en send(): al modelo le llega el /skill resuelto.
-  const content = expandSkillCommand(typed);
+  const prepared = await preparePrompt(typed);
+  const content = prepared.spilled ? prepared.content : expandSkillCommand(prepared.content);
   const message: ChatMessage = {
     id: uid(),
     role: 'user',
@@ -232,14 +237,21 @@ export function getSnapshot(): AgentState {
 
 export function hydrate(): Promise<void> {
   if (!hydrating) {
-    hydrating = loadMessages().then((messages) => {
-      if (state.messages.length > 0 || state.isStreaming) {
-        return;
-      }
-      if (messages.length > 0) {
-        setState({ messages });
-      }
-    });
+    hydrating = loadMessages()
+      .then((messages) => {
+        if (state.messages.length > 0 || state.isStreaming) {
+          return;
+        }
+        if (messages.length > 0) {
+          setState({ messages });
+        }
+      })
+      .catch((error: unknown) => {
+        console.warn('[history] no se pudo leer:', error instanceof Error ? error.message : String(error));
+      })
+      .then(() => {
+        setState({ hydrated: true });
+      });
   }
   return hydrating;
 }
@@ -376,9 +388,20 @@ export async function send(
   }
 
   const token = ++runToken;
+  let prompt = '';
+  if (typed) {
+    try {
+      const prepared = await preparePrompt(typed);
+      prompt = prepared.spilled ? prepared.content : expandSkillCommand(prepared.content);
+    }
+    catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      return { ok: false, error: message };
+    }
+  }
   const content = [
     recorded?.transcript?.trim() ?? '',
-    typed ? expandSkillCommand(typed) : '',
+    prompt,
   ].filter(Boolean).join('\n\n');
   const userMessage: ChatMessage = {
     id: uid(),
@@ -390,9 +413,9 @@ export async function send(
     status: 'done',
     createdAt: Date.now(),
   };
-  const usable = contextSince > 0
+  const usable = (contextSince > 0
     ? state.messages.filter(message => (message.createdAt ?? 0) >= contextSince)
-    : state.messages;
+    : state.messages).filter(message => !message.viewOnly);
   const history = [...usable, userMessage];
 
   setState({
@@ -662,7 +685,7 @@ async function runAgentLoop(
 
     const toolResults: ChatToolResult[] = [];
     /** Imagenes traidas con `read`: se adjuntan al turno para la vision. */
-    const pendingImages: Array<{ path: string; image: ChatImage }> = [];
+    const pendingImages: Array<{ path: string; image: ChatImage; viewOnly: boolean }> = [];
     for (const call of turn.toolCalls) {
       if (!alive()) {
         return;
@@ -839,7 +862,13 @@ async function runAgentLoop(
           await refreshChia();
         }
         if (outcome.image) {
-          pendingImages.push({ path: readArgs.path, image: outcome.image });
+          pendingImages.push({
+            path: readArgs.path,
+            image: outcome.image,
+            // La hoja de un video ya viene descrita en el tool result: se muestra
+            // pero no se vuelve a mandar al modelo en cada turno.
+            viewOnly: isVideoPath(readArgs.path),
+          });
         }
         const readResult: ChatToolResult = {
           toolCallId: call.id,
@@ -1064,6 +1093,22 @@ async function runAgentLoop(
       saveNow(assistant);
     }
 
+    // Nada se recorta: la salida de cualquier tool que pase `maxChars` se guarda
+    // completa en `.chia/tmp` y al modelo le llega la ruta para leerla por partes.
+    // `read` queda fuera: ya pagina el archivo original, copiarlo seria un bucle.
+    for (let index = 0; index < toolResults.length; index += 1) {
+      const item = toolResults[index];
+      if (item.tool === 'read') {
+        continue;
+      }
+      const output = await spillLongOutput(item.output);
+      if (output !== item.output) {
+        toolResults[index] = { ...item, output };
+        assistant.toolResults = [...toolResults];
+        updateMessage(assistant.id, { toolResults: [...toolResults] });
+      }
+    }
+
     assistant.toolResults = toolResults;
     assistant.status = 'done';
     assistant.durationMs = Date.now() - requestAt;
@@ -1081,10 +1126,11 @@ async function runAgentLoop(
       const imageMessage: ChatMessage = {
         id: uid(),
         role: 'user',
-        content: `[read] ${item.path}`,
+        content: `[read] ${item.path.split('/').pop() || item.path}`,
         images: [item.image],
         status: 'done',
         createdAt: Date.now(),
+        viewOnly: item.viewOnly || undefined,
       };
       saveNow(imageMessage);
       working = [...working, imageMessage];

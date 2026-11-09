@@ -23,6 +23,8 @@ export type ChatImage = {
   data: string;
   width?: number;
   height?: number;
+  /** "contain": mostrar entera (hoja de fotogramas de un video); si falta, recorte cuadrado. */
+  layout?: 'contain';
 };
 
 export type ChatAudio = {
@@ -75,6 +77,8 @@ export type ChatMessage = {
   limits?: LlmLimits;
   durationMs?: number;
   kind?: 'summary';
+  /** Solo para el usuario: no viaja al modelo (la miniatura de un video). */
+  viewOnly?: boolean;
 };
 
 /** Config del unico proveedor: el Studio API del servidor. */

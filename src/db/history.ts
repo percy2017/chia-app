@@ -114,6 +114,7 @@ function toMessage(row: Record<string, unknown>): ChatMessage {
     limits: toLimits(row.limits),
     durationMs: typeof row.duration_ms === 'number' ? row.duration_ms : undefined,
     kind: row.kind === 'summary' ? 'summary' : undefined,
+    viewOnly: row.view_only === 1 ? true : undefined,
   };
 }
 
@@ -166,8 +167,8 @@ export function saveMessage(message: ChatMessage): Promise<void> {
         `INSERT INTO messages (
         id, role, content, reasoning,
         tool_calls, tool_results, images, status, error, usage, kind, created_at, audio,
-        duration_ms, doc, limits
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        duration_ms, doc, limits, view_only
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         role = excluded.role,
         content = excluded.content,
@@ -182,7 +183,8 @@ export function saveMessage(message: ChatMessage): Promise<void> {
         audio = excluded.audio,
         duration_ms = excluded.duration_ms,
         doc = excluded.doc,
-        limits = excluded.limits`,
+        limits = excluded.limits,
+        view_only = excluded.view_only`,
         [
           snapshot.id,
           snapshot.role,
@@ -200,6 +202,7 @@ export function saveMessage(message: ChatMessage): Promise<void> {
           typeof snapshot.durationMs === 'number' ? snapshot.durationMs : null,
           snapshot.doc ? json(snapshot.doc) : null,
           snapshot.limits ? json(snapshot.limits) : null,
+          snapshot.viewOnly ? 1 : 0,
         ],
       );
     }

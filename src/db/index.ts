@@ -71,6 +71,7 @@ const COLUMNS: Array<{ table: string; column: string; type: string }> = [
   { table: 'messages', column: 'doc', type: 'TEXT' },
   { table: 'messages', column: 'duration_ms', type: 'INTEGER' },
   { table: 'messages', column: 'limits', type: 'TEXT' },
+  { table: 'messages', column: 'view_only', type: 'INTEGER' },
 ];
 
 function migrate(handle: DB) {

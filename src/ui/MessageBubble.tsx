@@ -1,4 +1,4 @@
-import type { ChatMessage } from '../llm/types';
+import type { ChatImage, ChatMessage } from '../llm/types';
 
 import Clipboard from '@react-native-clipboard/clipboard';
 import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
@@ -357,25 +357,36 @@ function DocChip({
 
 function Thumb({
   uri,
+  image,
   onPress,
 }: {
   uri: string;
+  image?: ChatImage;
   onPress: () => void;
 }) {
   const [failed, setFailed] = useState(false);
   const [loading, setLoading] = useState(true);
+  const entera = image?.layout === 'contain';
+  const proporcion = image?.width && image?.height ? image.height / image.width : 0.62;
+  const estilo = entera
+    ? [styles.image, {
+        width: THUMB_WIDTH,
+        height: Math.round(THUMB_WIDTH * proporcion),
+        backgroundColor: '#000000',
+      }]
+    : [styles.image, { width: THUMB_WIDTH, height: THUMB_HEIGHT }];
 
   return (
     <Focusable
       onPress={onPress}
       style={({ pressed }) => [styles.thumb, pressed ? styles.thumbPressed : null]}
       accessibilityRole="imagebutton"
-      accessibilityLabel="Abrir imagen a pantalla completa"
+      accessibilityLabel={entera ? 'Abrir fotogramas del video' : 'Abrir imagen a pantalla completa'}
     >
       <Image
         source={{ uri }}
-        style={styles.image}
-        resizeMode="cover"
+        style={estilo}
+        resizeMode={entera ? 'contain' : 'cover'}
         onLoadEnd={() => setLoading(false)}
         onError={() => {
           setLoading(false);
@@ -484,6 +495,7 @@ export const MessageBubble = React.memo(function MessageBubble({ message }: { me
                   <Thumb
                     key={`${message.id}-image-${index}`}
                     uri={`data:${image.mimeType};base64,${image.data}`}
+                    image={image}
                     onPress={() => setOpenImage(index)}
                   />
                 ))}
@@ -563,6 +575,9 @@ export const MessageBubble = React.memo(function MessageBubble({ message }: { me
   );
 });
 
+const THUMB_WIDTH = 240;
+const THUMB_HEIGHT = 160;
+
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
@@ -619,8 +634,6 @@ const styles = StyleSheet.create({
     opacity: 0.75,
   },
   image: {
-    width: 220,
-    height: 160,
     borderRadius: 10,
   },
   thumbOverlay: {

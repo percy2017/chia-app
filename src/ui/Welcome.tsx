@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 
-import { speak } from '../audio/player';
+import { speak, stopAudio } from '../audio/player';
 
 type Props = {
   /** Instrucciones del usuario (Configuracion > Agente > Instrucciones). */
@@ -38,6 +38,16 @@ export function Welcome({ text, logo }: Props) {
       console.warn('[welcome] no se pudo hablar:', error instanceof Error ? error.message : String(error));
     });
   }, [saludo]);
+
+  // Si el chat deja de estar vacio (llego el historial o el usuario escribio)
+  // el saludo se desmonta y la voz se corta: solo suena en el chat vacio.
+  useEffect(() => {
+    return () => {
+      if (spoken.current) {
+        stopAudio();
+      }
+    };
+  }, []);
 
   useEffect(() => {
     let alive = true;

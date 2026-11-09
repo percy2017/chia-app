@@ -39,7 +39,8 @@ async function runPhoneRead(
         isError: true,
       };
     }
-    const body = file.content;
+    const clamp = clampChars(file.content, config.maxChars);
+    const body = clamp.text;
     if (!body.trim()) {
       return {
         output: start > 1 && (file.lines ?? 0) > 0
@@ -53,11 +54,14 @@ async function runPhoneRead(
     const shown = countLines(body);
     const endLine = start + shown - 1;
     const total = file.lines ?? endLine;
-    if (file.truncated || endLine < total) {
+    if (file.truncated || clamp.cut || endLine < total) {
+      const partialNote = clamp.partial
+        ? '\n[La linea quedo cortada a medias: el resto de esa linea sale con shell.]'
+        : '';
       return {
         output: `${body}
 
-[Showing lines ${start}-${endLine} of ${total} [telefono]. Use offset=${endLine + 1} to continue.]`,
+[Showing lines ${start}-${endLine} of ${total} [telefono]. Use offset=${endLine + 1} to continue.]${partialNote}`,
         exitCode: 0,
         durationMs: Date.now() - started,
         isError: false,
@@ -91,7 +95,10 @@ const DEFAULT_LINES = 2000;
 import { execSsh } from './client';
 import { readRemoteFile } from './native';
 import { readPhoneFile } from '../phone/files';
+import { describeVideo, formatVideo, isRemoteUrl, isVideoPath } from './video';
 import { ensureSsh } from './tool';
+
+export { isVideoPath };
 
 const IMAGE_MIME: Record<string, string> = {
   jpg: 'image/jpeg',
@@ -169,6 +176,22 @@ function countLines(text: string): number {
   return text.endsWith('\n') ? breaks : breaks + 1;
 }
 
+/** Tope de chars de una tool: corta en el ultimo salto entero (o duro si no hay). */
+function clampChars(text: string, maxChars: number): { text: string; cut: boolean; partial: boolean } {
+  // Margen para la nota final: si el texto ya viene con el tope justo, la nota
+  // lo pasaria y el aviso de paginacion acabaria guardado como archivo.
+  const limit = Math.max(200, maxChars - 240);
+  if (maxChars <= 0 || text.length <= limit) {
+    return { text, cut: false, partial: false };
+  }
+  const hard = text.slice(0, limit);
+  const lastBreak = hard.lastIndexOf('\n');
+  if (lastBreak > 0) {
+    return { text: hard.slice(0, lastBreak), cut: true, partial: false };
+  }
+  return { text: hard, cut: true, partial: true };
+}
+
 export function parseTarget(record: Record<string, unknown>): ReadTarget | null {
   const raw = [record.target, record.device, record.host, record.source]
     .find(value => typeof value === 'string');
@@ -211,9 +234,45 @@ export function parseReadArgs(raw: string): ReadArgs | null {
   return { path, offset, limit, target };
 }
 
-/** Etiqueta corta para la UI ("read /ruta"). */
+/** Etiqueta corta para la UI ("read /ruta"): de imagen o video solo el nombre. */
 export function readCommand(args: ReadArgs): string {
-  return args.target === 'phone' ? `read ${args.path} (telefono)` : `read ${args.path}`;
+  const base = args.path.split('/').pop() || args.path;
+  const corto = IMAGE_MIME[extension(args.path)] || isVideoPath(args.path) ? base : args.path;
+  return args.target === 'phone' ? `read ${corto} (telefono)` : `read ${corto}`;
+}
+
+/** Un video no viaja al modelo: la api lo describe (fotogramas + transcripcion). */
+async function runVideoRead(args: ReadArgs, started: number): Promise<ReadOutcome> {
+  const remoto = isRemoteUrl(args.path);
+  if (!remoto && args.target === 'phone') {
+    return {
+      output: `El video tiene que estar en el VPS o ser una url: ${args.path} esta en el telefono. `
+        + 'Subilo al VPS (scp/curl) y leelo de ahi.',
+      exitCode: 1,
+      durationMs: Date.now() - started,
+      isError: true,
+    };
+  }
+  try {
+    const video = await describeVideo(args.path);
+    const nombre = remoto ? args.path : (args.path.split('/').pop() || args.path);
+    return {
+      output: formatVideo(video, nombre),
+      exitCode: 0,
+      durationMs: Date.now() - started,
+      isError: false,
+      image: video.hoja,
+    };
+  }
+  catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      output: `No se pudo describir el video ${args.path}: ${message}`,
+      exitCode: 1,
+      durationMs: Date.now() - started,
+      isError: true,
+    };
+  }
 }
 
 
@@ -224,6 +283,10 @@ export async function runReadTool(
   const started = Date.now();
   const config = getToolsConfig();
   const mime = IMAGE_MIME[extension(args.path)];
+
+  if (isVideoPath(args.path)) {
+    return runVideoRead(args, started);
+  }
 
   if (args.target === 'phone') {
     return runPhoneRead(args, mime, started, config);
@@ -317,13 +380,15 @@ export async function runReadTool(
   }
 
   const cut = truncateBytes(body, config.maxBytes);
-  body = cut.text;
+  const chars = clampChars(cut.text, config.maxChars);
+  body = chars.text;
 
   const shownLines = countLines(body);
   const endLine = start + shownLines - 1;
   const remaining = totalLines > 0 && endLine < totalLines;
+  const trimmed = cut.truncated || chars.cut;
 
-  if (!cut.truncated && !remaining) {
+  if (!trimmed && !remaining) {
     return {
       output: body,
       exitCode: 0,
@@ -335,10 +400,13 @@ export async function runReadTool(
   const limitNote = cut.truncated
     ? ` (${formatSize(config.maxBytes)} limit)`
     : '';
+  const partialNote = chars.partial
+    ? ' La linea quedo cortada a medias: el resto de esa linea sale con shell (head -c, cut -c o sed).'
+    : '';
   return {
-    output: `${body}\n\n[Showing lines ${start}-${endLine} of ${totalLines}${limitNote}. Use offset=${
+    output: `${body}\n\n[Showing lines ${start}-${endLine} of ${totalLines}${limitNote}. Use offset=$
       endLine + 1
-    } to continue.]`,
+    } to continue.]${partialNote}`,
     exitCode: 0,
     durationMs: Date.now() - started,
     isError: false,
